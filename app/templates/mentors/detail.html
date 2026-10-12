@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}{{ mentor.first_name }} {{ mentor.last_name }} — MentorMatch{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Left Column: Profile Card & Actions -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 sticky-top" style="top: 80px;">
+            <div class="card-body p-4 text-center">
+                <div class="avatar-placeholder bg-primary text-white rounded-circle d-inline-flex justify-content-center align-items-center mb-3" style="width: 80px; height: 80px; font-size: 2rem; font-weight: bold;">
+                    {{ mentor.first_name[0] }}{{ mentor.last_name[0] }}
+                </div>
+                <h4 class="fw-bold mb-1">{{ mentor.first_name }} {{ mentor.last_name }}</h4>
+                <p class="text-primary fw-semibold mb-0">{{ mentor.current_title }}</p>
+                <p class="text-muted small mb-3">{{ mentor.organization }}</p>
+
+                <div class="d-grid gap-2">
+                    {% if current_user and current_user.role == 'MENTEE' %}
+                        {% if existing_app %}
+                            <div class="alert alert-info py-2 small mb-0">
+                                Application status: <strong>{{ existing_app.status }}</strong>
+                            </div>
+                        {% else %}
+                            <a href="{{ url_for('applications.apply_to_mentor', mentor_id=mentor.id) }}" class="btn btn-primary fw-semibold py-2">
+                                <i class="bi bi-send"></i> Apply for Mentorship
+                            </a>
+                        {% endif %}
+                    {% elif not current_user %}
+                        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-primary">Sign in to Apply</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Weekly Availability Summary -->
+            <div class="card-footer bg-light p-3">
+                <h6 class="fw-bold small mb-2"><i class="bi bi-clock-history"></i> Weekly Available Windows</h6>
+                {% if availability %}
+                <ul class="list-unstyled small text-secondary mb-0">
+                    {% set day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] %}
+                    {% for a in availability %}
+                    <li class="mb-1">
+                        <span class="badge bg-secondary-subtle text-dark">{{ day_names[a.day_of_week] }}</span>
+                        {{ a.start_time }} – {{ a.end_time }}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted small mb-0">No recurring windows listed.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Bio, Skills, and Reviews -->
+    <div class="col-lg-8">
+        <!-- Biography -->
+        <div class="card mb-4 shadow-sm border-0">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-3">About the Mentor</h5>
+                <p class="text-secondary mb-0" style="white-space: pre-line;">{{ mentor.bio or 'No detailed biography provided.' }}</p>
+            </div>
+        </div>
+
+        <!-- Skills & Expertise -->
+        <div class="card mb-4 shadow-sm border-0">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-3">Areas of Expertise</h5>
+                {% if mentor_skills %}
+                <div class="d-flex flex-wrap gap-2">
+                    {% for s in mentor_skills %}
+                    <div class="p-2 border rounded bg-light">
+                        <strong class="d-block text-dark small">{{ s.name }}</strong>
+                        <span class="badge {% if s.proficiency == 'EXPERT' %}bg-success{% else %}bg-primary{% endif %}" style="font-size: 0.7rem;">
+                            {{ s.proficiency }}
+                        </span>
+                        <span class="text-muted" style="font-size: 0.75rem;">{{ s.years_of_experience }} yrs exp</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted small mb-0">No specific skills listed.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Past Mentee Reviews -->
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-chat-square-quote-fill text-warning"></i> Mentee Evaluations ({{ reviews|length }})</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if reviews %}
+                <div class="list-group list-group-flush">
+                    {% for r in reviews %}
+                    <div class="list-group-item p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold small">{{ r.first_name }} {{ r.last_name }}</span>
+                            <span class="text-warning fw-bold">
+                                {% for _ in range(r.rating) %}★{% endfor %}
+                            </span>
+                        </div>
+                        <p class="text-secondary small mb-1">{{ r.review_text }}</p>
+                        <span class="text-muted" style="font-size: 0.75rem;">{{ r.created_at }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted small">
+                    No reviews received yet.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

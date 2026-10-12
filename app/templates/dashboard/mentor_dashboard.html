@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}Mentor Dashboard — MentorMatch{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Header Greeting & Rating Card -->
+    <div class="col-12">
+        <div class="card bg-success text-white p-4 border-0 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <h2 class="fw-bold mb-1">Mentor Portal — {{ user.first_name }} {{ user.last_name }} 🌟</h2>
+                    <p class="mb-0 text-white-50">
+                        {{ user.current_title or 'Mentor' }} &bull; {{ user.organization or 'Company/Institution' }}
+                    </p>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-white text-dark px-3 py-2 rounded shadow-sm text-center">
+                        <div class="fw-bold fs-4 text-warning">
+                            ★ {{ rating_info.avg_rating }}
+                        </div>
+                        <div class="small text-muted">{{ rating_info.total_reviews }} Reviews</div>
+                    </div>
+                    <a href="{{ url_for('schedule.manage_availability') }}" class="btn btn-light text-success fw-semibold">
+                        <i class="bi bi-calendar-check"></i> Manage Availability
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Column: Pending Applications & Active Mentees -->
+    <div class="col-lg-8">
+        <!-- Pending Applications Needing Action -->
+        {% if pending_apps %}
+        <div class="card mb-4 border-warning">
+            <div class="card-header bg-warning text-dark py-3 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-envelope-exclamation-fill"></i> Pending Applications (Action Required)</h5>
+                <span class="badge bg-dark">{{ pending_apps|length }} Pending</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% for a in pending_apps %}
+                    <div class="list-group-item p-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="fw-bold mb-0 text-primary">{{ a.first_name }} {{ a.last_name }}</h6>
+                            <span class="text-muted small">{{ a.created_at }}</span>
+                        </div>
+                        {% if a.goal_title %}
+                        <div class="badge bg-info-subtle text-info mb-2">Target Goal: {{ a.goal_title }}</div>
+                        {% endif %}
+                        <p class="small text-muted bg-light p-2 rounded mb-3">"{{ a.message }}"</p>
+                        
+                        <!-- Decision Form -->
+                        <form method="POST" action="{{ url_for('applications.decide_application', app_id=a.id) }}" class="d-flex gap-2">
+                            <button type="submit" name="decision" value="ACCEPTED" class="btn btn-sm btn-success">
+                                <i class="bi bi-check-circle"></i> Accept Mentee
+                            </button>
+                            <button type="submit" name="decision" value="REJECTED" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-x-circle"></i> Decline
+                            </button>
+                        </form>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Active Mentorships -->
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-people-fill text-success"></i> Active Mentees</h5>
+                <a href="{{ url_for('relations.list_relations') }}" class="btn btn-sm btn-outline-primary">All Partnerships</a>
+            </div>
+            <div class="card-body p-0">
+                {% if active_relations %}
+                    <div class="list-group list-group-flush">
+                        {% for r in active_relations %}
+                        <div class="list-group-item p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <h6 class="fw-bold mb-1">{{ r.first_name }} {{ r.last_name }}</h6>
+                                <p class="text-muted small mb-0">{{ r.organization }}</p>
+                                <span class="badge bg-success-subtle text-success mt-1">Active Since: {{ r.start_date }}</span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('relations.relation_detail', relation_id=r.id) }}" class="btn btn-sm btn-primary">
+                                    View Workspace & Meetings
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center p-4 text-muted">
+                        No active mentees currently. You can review and accept incoming applications above.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Upcoming Sessions -->
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-calendar-event text-primary"></i> Upcoming Mentorship Sessions</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if upcoming_meetings %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light small">
+                                <tr>
+                                    <th>Mentee</th>
+                                    <th>Scheduled Time</th>
+                                    <th>Agenda</th>
+                                    <th>Meeting Link</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for m in upcoming_meetings %}
+                                <tr>
+                                    <td class="fw-semibold">{{ m.first_name }} {{ m.last_name }}</td>
+                                    <td>{{ m.scheduled_start }}</td>
+                                    <td class="small text-muted">{{ m.agenda or 'Open Q&A' }}</td>
+                                    <td>
+                                        {% if m.meeting_link %}
+                                        <a href="{{ m.meeting_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-camera-video"></i> Start Session
+                                        </a>
+                                        {% else %}
+                                        <span class="text-muted small">—</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center p-4 text-muted">No upcoming sessions scheduled.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Skills & Notifications -->
+    <div class="col-lg-4">
+        <!-- Mentor Expertise -->
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0"><i class="bi bi-award-fill text-warning"></i> My Mentorship Skills</h6>
+                <a href="{{ url_for('skills.manage_user_skills') }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            </div>
+            <div class="card-body">
+                {% if user_skills %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for s in user_skills %}
+                        <span class="badge bg-light text-dark border p-2">
+                            {{ s.name }}
+                            <span class="badge bg-success ms-1">{{ s.proficiency }}</span>
+                            <span class="text-muted small">({{ s.years_of_experience }} yrs)</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-0">No expertise areas configured yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Notifications -->
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h6 class="fw-bold mb-0"><i class="bi bi-bell text-primary"></i> Notifications</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if notifications %}
+                    <div class="list-group list-group-flush">
+                        {% for n in notifications %}
+                        <div class="list-group-item p-3 {% if not n.is_read %}bg-light{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong class="small">{{ n.title }}</strong>
+                                <span class="text-muted small" style="font-size: 0.75rem;">{{ n.created_at.strftime('%b %d') if n.created_at else '' }}</span>
+                            </div>
+                            <p class="small text-muted mb-1 mt-1">{{ n.message }}</p>
+                            {% if not n.is_read %}
+                            <form method="POST" action="{{ url_for('profile.mark_notification_read', notif_id=n.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none" style="font-size: 0.75rem;">Mark read</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center p-3 text-muted small">No notifications</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

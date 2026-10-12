@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Database Connection Required — MentorMatch{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center my-5">
+    <div class="col-md-8">
+        <div class="card border-warning shadow-sm">
+            <div class="card-header bg-warning text-dark py-3">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle-fill"></i> Relational Database Connection Required</h5>
+            </div>
+            <div class="card-body p-4">
+                <p class="lead">The Flask application is configured to connect to <strong>MySQL 8.0</strong> via raw SQL, but the database server at <code>{{ db_host }}:{{ db_port }}</code> is currently unreachable.</p>
+                
+                <div class="alert alert-secondary font-monospace" style="font-size: 0.85rem;">
+                    {{ error_message }}
+                </div>
+
+                <h6 class="fw-bold mt-4">How to initialize your MySQL database:</h6>
+                <ol class="small text-secondary">
+                    <li class="mb-2">
+                        <strong>Start MySQL Server</strong> on your local machine or container:
+                        <pre class="bg-light p-2 rounded mt-1"><code>sudo systemctl start mysql   # or: docker run -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root -d mysql:8.0</code></pre>
+                    </li>
+                    <li class="mb-2">
+                        <strong>Execute the Schema DDL & Seed Scripts</strong>:
+                        <pre class="bg-light p-2 rounded mt-1"><code>mysql -h {{ db_host }} -u root -p < sql/01_schema.sql
+mysql -h {{ db_host }} -u root -p < sql/02_seed_data.sql</code></pre>
+                    </li>
+                    <li class="mb-2">
+                        <strong>Configure environment variables</strong> in <code>.env</code> or <code>config.py</code>:
+                        <pre class="bg-light p-2 rounded mt-1"><code>DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=your_password
+DB_NAME=mentor_platform</code></pre>
+                    </li>
+                </ol>
+
+                <div class="mt-4">
+                    <a href="javascript:location.reload()" class="btn btn-primary"><i class="bi bi-arrow-clockwise"></i> Retry Connection</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

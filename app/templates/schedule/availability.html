@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Weekly Availability — MentorMatch{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12">
+        <h2 class="fw-bold mb-1"><i class="bi bi-clock-history text-success"></i> Weekly Availability Schedule</h2>
+        <p class="text-muted mb-0">Configure recurring weekly time slots during which mentees can book 1-on-1 sessions.</p>
+    </div>
+
+    <!-- Form: Add Availability Window -->
+    <div class="col-md-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0">Add Recurring Window</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('schedule.manage_availability') }}">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Day of Week *</label>
+                        <select class="form-select" name="day_of_week" required>
+                            {% for day_val, day_name in days.items() %}
+                            <option value="{{ day_val }}">{{ day_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Start Time *</label>
+                            <input type="time" class="form-control" name="start_time" required value="17:00">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">End Time *</label>
+                            <input type="time" class="form-control" name="end_time" required value="19:00">
+                        </div>
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-success fw-semibold">Add Availability Window</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Availability Windows -->
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0">Active Weekly Windows ({{ slots|length }})</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if slots %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Day</th>
+                                <th>Time Interval</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in slots %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ days[s.day_of_week] }}</td>
+                                <td>{{ s.start_time }} – {{ s.end_time }}</td>
+                                <td><span class="badge bg-success-subtle text-success">Active</span></td>
+                                <td class="text-end">
+                                    <form method="POST" action="{{ url_for('schedule.delete_availability', slot_id=s.id) }}" class="d-inline" onsubmit="return confirm('Delete this availability window?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center p-4 text-muted">
+                    No availability blocks defined. Mentees will not see any open slots until you add recurring windows.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

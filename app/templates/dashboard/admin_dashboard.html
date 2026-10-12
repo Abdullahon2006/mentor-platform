@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard — MentorMatch{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card bg-dark text-white p-4 border-0 shadow-sm">
+            <h2 class="fw-bold mb-1"><i class="bi bi-shield-lock-fill text-danger"></i> System Administration</h2>
+            <p class="mb-0 text-white-50">BBF 302E Database Management System Oversight</p>
+        </div>
+    </div>
+
+    <!-- Quick Metrics Cards -->
+    <div class="col-md-3">
+        <div class="card text-center p-3 shadow-sm border-0">
+            <h6 class="text-muted small">Registered Mentors</h6>
+            <h2 class="fw-bold text-success">{{ stats.mentor_count }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3 shadow-sm border-0">
+            <h6 class="text-muted small">Registered Mentees</h6>
+            <h2 class="fw-bold text-primary">{{ stats.mentee_count }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3 shadow-sm border-0">
+            <h6 class="text-muted small">Active Partnerships</h6>
+            <h2 class="fw-bold text-warning">{{ stats.active_relations_count }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center p-3 shadow-sm border-0">
+            <h6 class="text-muted small">Completed Sessions</h6>
+            <h2 class="fw-bold text-info">{{ stats.completed_meetings_count }}</h2>
+        </div>
+    </div>
+
+    <!-- Admin Actions -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0">Management Quick Links</h5>
+            </div>
+            <div class="card-body d-flex flex-wrap gap-2">
+                <a href="{{ url_for('admin.index') }}" class="btn btn-outline-danger">
+                    <i class="bi bi-people"></i> Manage All Users
+                </a>
+                <a href="{{ url_for('skills.list_skills') }}" class="btn btn-outline-primary">
+                    <i class="bi bi-tags"></i> Add/Edit Skill Taxonomy
+                </a>
+                <a href="{{ url_for('relations.list_relations') }}" class="btn btn-outline-success">
+                    <i class="bi bi-diagram-3"></i> Inspect All Mentorships
+                </a>
+                <a href="{{ url_for('reviews.leaderboard') }}" class="btn btn-outline-warning">
+                    <i class="bi bi-trophy"></i> View Analytics Leaderboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

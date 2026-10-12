@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Apply for Mentorship — MentorMatch{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-3">
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white py-3">
+                <h5 class="fw-bold mb-0">Apply for Mentorship with {{ mentor.first_name }} {{ mentor.last_name }}</h5>
+                <p class="small mb-0 text-white-50">{{ mentor.current_title }} &bull; {{ mentor.organization }}</p>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('applications.apply_to_mentor', mentor_id=mentor.id) }}">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Target Learning Goal (Optional but Recommended)</label>
+                        <select class="form-select" name="goal_id">
+                            <option value="">-- Select one of your active goals --</option>
+                            {% for g in goals %}
+                            <option value="{{ g.id }}">{{ g.title }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Linking a specific goal helps the mentor understand your milestones.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Motivation Statement *</label>
+                        <textarea class="form-control" name="message" rows="5" required placeholder="Introduce yourself, explain what specific guidance you are seeking, and why you selected this mentor..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('applications.mentor_detail', mentor_id=mentor.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold">Submit Application</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

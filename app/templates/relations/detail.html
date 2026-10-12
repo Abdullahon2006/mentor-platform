@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+
+{% block title %}Mentorship Workspace — MentorMatch{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Header Card -->
+    <div class="col-12">
+        <div class="card p-4 shadow-sm border-0 bg-white">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <div>
+                    <span class="badge {% if rel.status == 'ACTIVE' %}bg-success{% elif rel.status == 'COMPLETED' %}bg-info text-dark{% elif rel.status == 'PAUSED' %}bg-warning text-dark{% else %}bg-secondary{% endif %} fs-6 mb-2">
+                        {{ rel.status }}
+                    </span>
+                    <h3 class="fw-bold mb-1">
+                        Mentorship: {{ rel.mentee_first }} {{ rel.mentee_last }} & {{ rel.mentor_first }} {{ rel.mentor_last }}
+                    </h3>
+                    <p class="text-muted small mb-0">
+                        Started: {{ rel.start_date }} {% if rel.end_date %}&bull; Ended: {{ rel.end_date }}{% endif %}
+                        {% if rel.goal_title %} &bull; <strong>Goal:</strong> {{ rel.goal_title }}{% endif %}
+                    </p>
+                </div>
+
+                <!-- Action Controls: Book Meeting & Status Transitions -->
+                <div class="d-flex gap-2 flex-wrap">
+                    {% if rel.status == 'ACTIVE' %}
+                    <a href="{{ url_for('schedule.book_meeting', relation_id=rel.id) }}" class="btn btn-success fw-semibold">
+                        <i class="bi bi-calendar-plus"></i> Schedule Meeting
+                    </a>
+                    
+                    <form method="POST" action="{{ url_for('relations.update_relation_status', relation_id=rel.id) }}" class="d-inline" onsubmit="return confirm('Mark this mentorship as completed?');">
+                        <input type="hidden" name="status" value="COMPLETED">
+                        <button type="submit" class="btn btn-outline-primary">Complete Program</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Meetings & Sessions History -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-calendar-week text-primary"></i> Scheduled & Past Sessions ({{ meetings|length }})</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if meetings %}
+                <div class="list-group list-group-flush">
+                    {% for m in meetings %}
+                    <div class="list-group-item p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-2 flex-wrap gap-2">
+                            <div>
+                                <h6 class="fw-bold mb-1">
+                                    {{ m.scheduled_start }}
+                                    <span class="badge {% if m.status == 'COMPLETED' %}bg-success{% elif m.status == 'CANCELLED' %}bg-danger{% elif m.status == 'SCHEDULED' %}bg-primary{% else %}bg-secondary{% endif %} ms-2">
+                                        {{ m.status }}
+                                    </span>
+                                </h6>
+                                <p class="text-secondary small mb-1"><strong>Agenda:</strong> {{ m.agenda or 'Open discussion' }}</p>
+                                {% if m.meeting_link and m.status == 'SCHEDULED' %}
+                                <a href="{{ m.meeting_link }}" target="_blank" class="btn btn-sm btn-outline-primary mt-1">
+                                    <i class="bi bi-camera-video"></i> Open Meeting Link
+                                </a>
+                                {% endif %}
+                                {% if m.cancellation_reason %}
+                                <div class="text-danger small mt-1"><em>Reason: {{ m.cancellation_reason }}</em></div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Session Controls -->
+                            {% if m.status == 'SCHEDULED' %}
+                            <div class="d-flex gap-2">
+                                <form method="POST" action="{{ url_for('schedule.update_meeting_status', meeting_id=m.id) }}">
+                                    <input type="hidden" name="status" value="COMPLETED">
+                                    <button type="submit" class="btn btn-sm btn-success">
+                                        <i class="bi bi-check2"></i> Mark Completed
+                                    </button>
+                                </form>
+                                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#cancelModal{{ m.id }}">
+                                    Cancel
+                                </button>
+                            </div>
+
+                            <!-- Cancellation Modal -->
+                            <div class="modal fade" id="cancelModal{{ m.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h6 class="modal-title fw-bold">Cancel Session</h6>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <form method="POST" action="{{ url_for('schedule.update_meeting_status', meeting_id=m.id) }}">
+                                            <input type="hidden" name="status" value="CANCELLED">
+                                            <div class="modal-body">
+                                                <label class="form-label small fw-semibold">Cancellation Reason *</label>
+                                                <input type="text" class="form-control" name="cancellation_reason" required placeholder="e.g. Schedule conflict">
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                                                <button type="submit" class="btn btn-danger btn-sm">Confirm Cancellation</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Meeting Notes Section -->
+                        <div class="mt-3 pt-3 border-top">
+                            {% if m.note_summary %}
+                            <div class="bg-light p-3 rounded">
+                                <strong class="small text-primary d-block mb-1"><i class="bi bi-journal-text"></i> Session Minutes:</strong>
+                                <p class="small mb-2">{{ m.note_summary }}</p>
+                                {% if m.action_items %}
+                                <strong class="small text-danger d-block mb-1"><i class="bi bi-list-check"></i> Action Items:</strong>
+                                <p class="small mb-0" style="white-space: pre-line;">{{ m.action_items }}</p>
+                                {% endif %}
+                            </div>
+                            {% elif m.status == 'COMPLETED' %}
+                            <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#addNote{{ m.id }}">
+                                + Add Notes & Action Items
+                            </button>
+                            <div class="collapse mt-2" id="addNote{{ m.id }}">
+                                <form method="POST" action="{{ url_for('schedule.add_meeting_notes', meeting_id=m.id) }}" class="card card-body bg-light">
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-semibold">Discussion Summary *</label>
+                                        <textarea class="form-control form-control-sm" name="summary" rows="2" required placeholder="What was covered?"></textarea>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small fw-semibold">Action Items & Next Steps</label>
+                                        <textarea class="form-control form-control-sm" name="action_items" rows="2" placeholder="Tasks to complete before next meeting"></textarea>
+                                    </div>
+                                    <button type="submit" class="btn btn-sm btn-primary align-self-end">Save Notes</button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="p-5 text-center text-muted">
+                    No meetings scheduled yet. Use the "Schedule Meeting" button above to arrange your first session!
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Reviews & Evaluations -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-star-fill text-warning"></i> Evaluations & Feedback</h5>
+            </div>
+            <div class="card-body">
+                <!-- Submit Review Form if not yet reviewed -->
+                {% if not has_reviewed %}
+                <form method="POST" action="{{ url_for('reviews.submit_review', relation_id=rel.id) }}" class="mb-4 p-3 bg-light rounded">
+                    <h6 class="fw-bold small mb-2">Leave an Evaluation</h6>
+                    <div class="mb-2">
+                        <label class="form-label small fw-semibold">Rating (1 to 5 Stars) *</label>
+                        <select class="form-select form-select-sm" name="rating" required>
+                            <option value="5" selected>★★★★★ (5 - Excellent)</option>
+                            <option value="4">★★★★☆ (4 - Good)</option>
+                            <option value="3">★★★☆☆ (3 - Average)</option>
+                            <option value="2">★★☆☆☆ (2 - Below Expectations)</option>
+                            <option value="1">★☆☆☆☆ (1 - Poor)</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Feedback Comment</label>
+                        <textarea class="form-control form-control-sm" name="review_text" rows="3" placeholder="Share your experience and learnings..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-warning fw-semibold w-100">Submit Review</button>
+                </form>
+                {% else %}
+                <div class="alert alert-success py-2 small mb-3">
+                    <i class="bi bi-check-circle"></i> You have submitted your review for this partnership.
+                </div>
+                {% endif %}
+
+                <!-- Existing reviews -->
+                <h6 class="fw-bold small text-muted text-uppercase mb-2">Submitted Reviews:</h6>
+                {% if reviews %}
+                <ul class="list-unstyled mb-0">
+                    {% for r in reviews %}
+                    <li class="border-bottom pb-2 mb-2">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <strong class="small">{{ r.first_name }} {{ r.last_name }}</strong>
+                            <span class="text-warning small">
+                                {% for _ in range(r.rating) %}★{% endfor %}
+                            </span>
+                        </div>
+                        <p class="small text-secondary mb-0">{{ r.review_text }}</p>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="small text-muted mb-0">No reviews recorded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}Mentee Dashboard — MentorMatch{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Header Greeting -->
+    <div class="col-12">
+        <div class="card bg-primary text-white p-4 border-0 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h2 class="fw-bold mb-1">Welcome back, {{ user.first_name }}! 👋</h2>
+                    <p class="mb-0 text-white-50">
+                        {{ user.current_title or 'Mentee' }} &bull; {{ user.organization or 'Student' }}
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('reviews.mentor_recommendations') }}" class="btn btn-warning fw-semibold shadow-sm">
+                        <i class="bi bi-stars"></i> Smart Mentor Matches
+                    </a>
+                    <a href="{{ url_for('applications.browse_mentors') }}" class="btn btn-light text-primary fw-semibold">
+                        <i class="bi bi-search"></i> Find Mentors
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Mentorships -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-person-check text-success"></i> Active Mentorship Partnerships</h5>
+                <a href="{{ url_for('relations.list_relations') }}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if active_relations %}
+                    <div class="list-group list-group-flush">
+                        {% for r in active_relations %}
+                        <div class="list-group-item p-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <h6 class="fw-bold mb-1">{{ r.first_name }} {{ r.last_name }}</h6>
+                                <p class="text-muted small mb-0">{{ r.current_title }} &bull; {{ r.organization }}</p>
+                                <span class="badge bg-success-subtle text-success mt-1">Started: {{ r.start_date }}</span>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('schedule.book_meeting', relation_id=r.id) }}" class="btn btn-sm btn-outline-success">
+                                    <i class="bi bi-calendar-plus"></i> Book Session
+                                </a>
+                                <a href="{{ url_for('relations.relation_detail', relation_id=r.id) }}" class="btn btn-sm btn-primary">
+                                    Workspace
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center p-4 text-muted">
+                        <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                        No active mentorship relationships yet. Browse mentors and apply to connect!
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Upcoming Sessions -->
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-calendar-event text-primary"></i> Upcoming Scheduled Sessions</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if upcoming_meetings %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light small">
+                                <tr>
+                                    <th>Mentor</th>
+                                    <th>Date & Time</th>
+                                    <th>Agenda</th>
+                                    <th>Link</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for m in upcoming_meetings %}
+                                <tr>
+                                    <td class="fw-semibold">{{ m.first_name }} {{ m.last_name }}</td>
+                                    <td>{{ m.scheduled_start }}</td>
+                                    <td class="small text-muted">{{ m.agenda or 'No agenda set' }}</td>
+                                    <td>
+                                        {% if m.meeting_link %}
+                                        <a href="{{ m.meeting_link }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-camera-video"></i> Join
+                                        </a>
+                                        {% else %}
+                                        <span class="text-muted small">—</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center p-4 text-muted">
+                        No upcoming sessions scheduled.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Mentorship Goals -->
+        <div class="card">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="fw-bold mb-0"><i class="bi bi-bullseye text-danger"></i> My Learning Goals</h5>
+                <a href="{{ url_for('applications.manage_goals') }}" class="btn btn-sm btn-outline-danger">+ Add Goal</a>
+            </div>
+            <div class="card-body p-0">
+                {% if goals %}
+                    <ul class="list-group list-group-flush">
+                        {% for g in goals %}
+                        <li class="list-group-item p-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="fw-semibold mb-1">{{ g.title }}</h6>
+                                <p class="small text-muted mb-0">{{ g.description }}</p>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge {% if g.status == 'ACHIEVED' %}bg-success{% elif g.status == 'ABANDONED' %}bg-secondary{% else %}bg-primary{% endif %}">
+                                    {{ g.status }}
+                                </span>
+                                {% if g.target_completion_date %}
+                                <div class="text-muted small mt-1">Due: {{ g.target_completion_date }}</div>
+                                {% endif %}
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="text-center p-4 text-muted">
+                        No learning goals set yet. Defining clear goals helps mentors understand your needs!
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Skills & Notifications -->
+    <div class="col-lg-4">
+        <!-- My Skills -->
+        <div class="card mb-4">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0"><i class="bi bi-award text-warning"></i> My Skills & Interests</h6>
+                <a href="{{ url_for('skills.manage_user_skills') }}" class="btn btn-sm btn-outline-warning">Edit</a>
+            </div>
+            <div class="card-body">
+                {% if user_skills %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for s in user_skills %}
+                        <span class="badge bg-light text-dark border p-2">
+                            {{ s.name }}
+                            <span class="badge bg-secondary ms-1">{{ s.proficiency }}</span>
+                        </span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted small mb-0">No skills added to your profile yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Notifications -->
+        <div class="card">
+            <div class="card-header bg-white py-3">
+                <h6 class="fw-bold mb-0"><i class="bi bi-bell text-primary"></i> Notifications</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if notifications %}
+                    <div class="list-group list-group-flush">
+                        {% for n in notifications %}
+                        <div class="list-group-item p-3 {% if not n.is_read %}bg-light{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong class="small">{{ n.title }}</strong>
+                                <span class="text-muted small" style="font-size: 0.75rem;">{{ n.created_at.strftime('%b %d') if n.created_at else '' }}</span>
+                            </div>
+                            <p class="small text-muted mb-1 mt-1">{{ n.message }}</p>
+                            {% if not n.is_read %}
+                            <form method="POST" action="{{ url_for('profile.mark_notification_read', notif_id=n.id) }}" class="d-inline">
+                                <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none" style="font-size: 0.75rem;">Mark as read</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center p-3 text-muted small">No notifications</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

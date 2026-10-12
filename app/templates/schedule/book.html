@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Book Session — MentorMatch{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-3">
+    <div class="col-md-7">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-success text-white py-3">
+                <h5 class="fw-bold mb-0">Schedule Session with {{ rel.mentor_first }} {{ rel.mentor_last }}</h5>
+            </div>
+            <div class="card-body p-4">
+                <!-- Mentor's Availability Guide -->
+                <div class="alert alert-light border mb-4">
+                    <strong class="d-block small text-secondary mb-1"><i class="bi bi-info-circle"></i> Mentor's Stated Availability Windows:</strong>
+                    {% if availability %}
+                    <ul class="list-inline small mb-0">
+                        {% for a in availability %}
+                        <li class="list-inline-item badge bg-light text-dark border">
+                            {{ days[a.day_of_week] }}: {{ a.start_time }} – {{ a.end_time }}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <span class="small text-muted">Mentor has not configured specific recurring hours. Please pick a suitable time.</span>
+                    {% endif %}
+                </div>
+
+                <form method="POST" action="{{ url_for('schedule.book_meeting', relation_id=rel.id) }}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Start Date & Time *</label>
+                            <input type="datetime-local" class="form-control" name="scheduled_start" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">End Date & Time *</label>
+                            <input type="datetime-local" class="form-control" name="scheduled_end" required>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Session Agenda / Topic *</label>
+                            <input type="text" class="form-control" name="agenda" required placeholder="e.g. Reviewing 3NF normalization dependencies">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Meeting Video Link (Optional)</label>
+                            <input type="url" class="form-control" name="meeting_link" placeholder="https://meet.jit.si/your-room or Zoom link">
+                            <div class="form-text">Defaults to a Jitsi Meet room if left blank.</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('relations.relation_detail', relation_id=rel.id) }}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-success px-4 fw-semibold">Confirm Booking</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

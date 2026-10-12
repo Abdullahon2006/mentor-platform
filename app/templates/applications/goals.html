@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}My Learning Goals — MentorMatch{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-bullseye text-danger"></i> Mentorship Learning Goals</h2>
+            <p class="text-muted mb-0">Define specific milestones to track your progress and share with mentors.</p>
+        </div>
+        <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#newGoalModal">
+            <i class="bi bi-plus-circle"></i> Create New Goal
+        </button>
+    </div>
+
+    <!-- Goals List -->
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-0">
+                {% if goals %}
+                <div class="list-group list-group-flush">
+                    {% for g in goals %}
+                    <div class="list-group-item p-4">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h5 class="fw-bold mb-1 text-dark">{{ g.title }}</h5>
+                                <p class="text-secondary small mb-2">{{ g.description }}</p>
+                                <span class="badge {% if g.status == 'ACHIEVED' %}bg-success{% elif g.status == 'ABANDONED' %}bg-secondary{% else %}bg-primary{% endif %}">
+                                    Status: {{ g.status }}
+                                </span>
+                                {% if g.target_completion_date %}
+                                <span class="badge bg-light text-dark border ms-1">Target Date: {{ g.target_completion_date }}</span>
+                                {% endif %}
+                            </div>
+                            <!-- Status Update & Delete Dropdown -->
+                            <div class="d-flex gap-2">
+                                <form method="POST" action="{{ url_for('applications.manage_goals') }}" class="d-inline">
+                                    <input type="hidden" name="action" value="update_status">
+                                    <input type="hidden" name="goal_id" value="{{ g.id }}">
+                                    {% if g.status == 'ACTIVE' %}
+                                    <button type="submit" name="status" value="ACHIEVED" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-check2-circle"></i> Mark Achieved
+                                    </button>
+                                    {% else %}
+                                    <button type="submit" name="status" value="ACTIVE" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Reopen
+                                    </button>
+                                    {% endif %}
+                                </form>
+                                <form method="POST" action="{{ url_for('applications.manage_goals') }}" class="d-inline" onsubmit="return confirm('Delete this goal permanently?');">
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="goal_id" value="{{ g.id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center p-5 text-muted">
+                    <i class="bi bi-bullseye fs-1 mb-2 d-block"></i>
+                    <h5>No goals declared yet</h5>
+                    <p class="small">Add a learning goal to give your mentorship sessions clear direction.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: New Goal -->
+<div class="modal fade" id="newGoalModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Create Mentorship Goal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('applications.manage_goals') }}">
+                <input type="hidden" name="action" value="create">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Goal Title *</label>
+                        <input type="text" class="form-control" name="title" required placeholder="e.g. Master Relational 3NF & BCNF Normalization">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Target Completion Date</label>
+                        <input type="date" class="form-control" name="target_date">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Detailed Description</label>
+                        <textarea class="form-control" name="description" rows="4" placeholder="What specific milestones will indicate success?"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Create Goal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Skills — MentorMatch{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-12">
+        <h2 class="fw-bold mb-1"><i class="bi bi-award-fill text-warning"></i> Manage Profile Skills</h2>
+        <p class="text-muted mb-0">Specify your skill competencies and years of experience to improve match accuracy.</p>
+    </div>
+
+    <!-- Form: Add or Update Skill -->
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0">Add / Update a Skill</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('skills.manage_user_skills') }}">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Select Skill *</label>
+                        <select class="form-select" name="skill_id" required>
+                            <option value="">-- Choose from catalog --</option>
+                            {% for s in all_skills %}
+                            <option value="{{ s.id }}">{{ s.category }}: {{ s.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Proficiency Level *</label>
+                        <select class="form-select" name="proficiency" required>
+                            <option value="BEGINNER">BEGINNER (Foundational / Learning)</option>
+                            <option value="INTERMEDIATE" selected>INTERMEDIATE (Practical project experience)</option>
+                            <option value="ADVANCED">ADVANCED (High proficiency / Production)</option>
+                            <option value="EXPERT">EXPERT (Industry authority / Specialized)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Years of Experience</label>
+                        <input type="number" class="form-control" name="years_of_experience" min="0" max="40" value="1">
+                    </div>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary">Save Skill to Profile</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table: Current User Skills -->
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0">My Active Endorsements ({{ current_skills|length }})</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if current_skills %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Category</th>
+                                <th>Skill Name</th>
+                                <th>Proficiency</th>
+                                <th>Exp</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cs in current_skills %}
+                            <tr>
+                                <td><span class="badge bg-secondary-subtle text-secondary">{{ cs.category }}</span></td>
+                                <td class="fw-bold">{{ cs.name }}</td>
+                                <td>
+                                    <span class="badge {% if cs.proficiency == 'EXPERT' %}bg-success{% elif cs.proficiency == 'ADVANCED' %}bg-primary{% elif cs.proficiency == 'INTERMEDIATE' %}bg-info text-dark{% else %}bg-secondary{% endif %}">
+                                        {{ cs.proficiency }}
+                                    </span>
+                                </td>
+                                <td>{{ cs.years_of_experience }} yrs</td>
+                                <td class="text-end">
+                                    <form method="POST" action="{{ url_for('skills.remove_user_skill', user_skill_id=cs.id) }}" class="d-inline" onsubmit="return confirm('Remove this skill from your profile?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center p-4 text-muted">
+                    No skills associated with your profile yet. Add one using the form on the left.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

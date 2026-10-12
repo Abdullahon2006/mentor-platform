@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Profile — MentorMatch{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-3">
+    <div class="col-md-7">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white py-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-pencil-square text-primary"></i> Edit Profile Information</h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('profile.edit_profile') }}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">First Name</label>
+                            <input type="text" class="form-control" name="first_name" value="{{ user.first_name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Last Name</label>
+                            <input type="text" class="form-control" name="last_name" value="{{ user.last_name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Current Title / Role</label>
+                            <input type="text" class="form-control" name="current_title" value="{{ user.current_title or '' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Organization / University</label>
+                            <input type="text" class="form-control" name="organization" value="{{ user.organization or '' }}">
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label small fw-semibold">Biography</label>
+                            <textarea class="form-control" name="bio" rows="4">{{ user.bio or '' }}</textarea>
+                        </div>
+                    </div>
+                    <div class="mt-4 d-flex justify-content-between">
+                        <a href="{{ url_for('profile.dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-4">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
