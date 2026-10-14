@@ -31,5 +31,6 @@ wheels/
 .pytest_cache/
 
 # Local Environment variables
+.env*
 .env
 *.log
