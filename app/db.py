@@ -88,6 +88,20 @@ def _adapt_sql_for_sqlite(sql):
     adapted = re.sub(r"CONCAT\(([^,]+),\s*([^)]+)\)", r"(\1 || \2)", adapted)
     # Replace NOW() with datetime('now')
     adapted = re.sub(r"\bNOW\(\)", "datetime('now')", adapted, flags=re.IGNORECASE)
+    # Replace DATE_ADD(NOW(), INTERVAL x DAY) with datetime('now', '+x days')
+    adapted = re.sub(
+        r"DATE_ADD\s*\(\s*(?:NOW\(\)|CURRENT_TIMESTAMP)\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)",
+        r"datetime('now', '+\1 days')",
+        adapted,
+        flags=re.IGNORECASE
+    )
+    # Replace DATEDIFF(a, CURRENT_DATE) with (CAST(julianday(a) - julianday('now') AS INTEGER))
+    adapted = re.sub(
+        r"DATEDIFF\s*\(\s*([^,]+)\s*,\s*(?:CURRENT_DATE|NOW\(\))\s*\)",
+        r"(CAST(julianday(\1) - julianday('now') AS INTEGER))",
+        adapted,
+        flags=re.IGNORECASE
+    )
     # Replace ON DUPLICATE KEY UPDATE with ON CONFLICT DO UPDATE
     if "ON DUPLICATE KEY UPDATE" in adapted:
         if "user_skills" in adapted:

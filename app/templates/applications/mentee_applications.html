@@ -22,6 +22,7 @@
                                 <th>Submitted On</th>
                                 <th>Status</th>
                                 <th>Message</th>
+                                <th class="text-end">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -44,6 +45,17 @@
                                 </td>
                                 <td class="small text-muted" style="max-width: 280px;">
                                     {{ a.message }}
+                                </td>
+                                <td class="text-end">
+                                    {% if a.status == 'PENDING' %}
+                                    <form method="POST" action="{{ url_for('applications.withdraw_application', app_id=a.id) }}" class="d-inline" onsubmit="return confirm('Withdraw this application?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-x-circle"></i> Withdraw
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <span class="text-muted small">—</span>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}
