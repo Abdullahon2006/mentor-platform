@@ -26,12 +26,27 @@
                             <div>
                                 <h5 class="fw-bold mb-1 text-dark">{{ g.title }}</h5>
                                 <p class="text-secondary small mb-2">{{ g.description }}</p>
-                                <span class="badge {% if g.status == 'ACHIEVED' %}bg-success{% elif g.status == 'ABANDONED' %}bg-secondary{% else %}bg-primary{% endif %}">
-                                    Status: {{ g.status }}
-                                </span>
-                                {% if g.target_completion_date %}
-                                <span class="badge bg-light text-dark border ms-1">Target Date: {{ g.target_completion_date }}</span>
-                                {% endif %}
+                                <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                                    <span class="badge {% if g.status == 'ACHIEVED' %}bg-success{% elif g.status == 'ABANDONED' %}bg-secondary{% else %}bg-primary{% endif %}">
+                                        Status: {{ g.status }}
+                                    </span>
+                                    {% if g.target_completion_date %}
+                                    <span class="badge bg-light text-dark border">
+                                        <i class="bi bi-calendar-event"></i> Target Date: {{ g.target_completion_date }}
+                                    </span>
+                                    {% endif %}
+                                    <span class="badge bg-light text-primary border">
+                                        <i class="bi bi-person-badge"></i> {{ g.assigned_mentor }}
+                                    </span>
+                                    <span class="badge bg-light text-success border">
+                                        <i class="bi bi-check2-circle"></i> {{ g.total_completed_sessions }} Completed Session(s)
+                                    </span>
+                                    {% if g.latest_session_date %}
+                                    <span class="badge bg-light text-muted border">
+                                        <i class="bi bi-clock-history"></i> Last Session: {{ g.latest_session_date }}
+                                    </span>
+                                    {% endif %}
+                                </div>
                             </div>
                             <!-- Status Update & Delete Dropdown -->
                             <div class="d-flex gap-2">

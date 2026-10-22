@@ -152,11 +152,28 @@ def manage_goals():
 
         return redirect(url_for('applications.manage_goals'))
 
+    # Complex Query 3: Mentee Goal Progress & Activity Correlation
     goals_sql = """
-        SELECT id, title, description, target_completion_date, status, created_at
-        FROM mentorship_goals
-        WHERE mentee_id = %s
-        ORDER BY created_at DESC
+        SELECT 
+            g.id, g.title, g.description, g.target_completion_date, g.status, g.created_at,
+            COALESCE(CONCAT(m.first_name, ' ', m.last_name), 'No Mentor Assigned') AS assigned_mentor,
+            m.id AS mentor_id,
+            COUNT(DISTINCT mt.id) AS total_completed_sessions,
+            MAX(mt.scheduled_start) AS latest_session_date
+        FROM mentorship_goals g
+        LEFT JOIN mentorship_applications ma 
+            ON g.id = ma.goal_id AND ma.status = 'ACCEPTED'
+        LEFT JOIN mentorship_relations mr 
+            ON ma.id = mr.application_id
+        LEFT JOIN users m 
+            ON mr.mentor_id = m.id
+        LEFT JOIN meetings mt 
+            ON mr.id = mt.relation_id AND mt.status = 'COMPLETED'
+        WHERE g.mentee_id = %s
+        GROUP BY 
+            g.id, g.title, g.description, g.target_completion_date, g.status, g.created_at,
+            m.id, m.first_name, m.last_name
+        ORDER BY g.created_at DESC
     """
     goals = fetch_all(goals_sql, (user_id,))
     return render_template('applications/goals.html', goals=goals)
@@ -303,4 +320,37 @@ def decide_application(app_id):
         execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)", (mentee_id, "Application Update", notif_msg))
         flash("Application declined.", "info")
 
+    return redirect(url_for('applications.list_applications'))
+
+@applications_bp.route('/applications/<int:app_id>/withdraw', methods=['POST'])
+@role_required('MENTEE')
+def withdraw_application(app_id):
+    """Mentee withdraws a pending application."""
+    user = get_current_user()
+    mentee_id = user['id']
+
+    app_record = fetch_one(
+        "SELECT id, mentor_id, status FROM mentorship_applications WHERE id = %s AND mentee_id = %s",
+        (app_id, mentee_id)
+    )
+    if not app_record:
+        flash("Application not found or unauthorized.", "danger")
+        return redirect(url_for('applications.list_applications'))
+
+    if app_record['status'] != 'PENDING':
+        flash("Only pending applications can be withdrawn.", "warning")
+        return redirect(url_for('applications.list_applications'))
+
+    execute_query(
+        "UPDATE mentorship_applications SET status = 'WITHDRAWN', decided_at = NOW() WHERE id = %s",
+        (app_id,)
+    )
+
+    notif_msg = f"{user['first_name']} {user['last_name']} withdrew their mentorship application."
+    execute_query(
+        "INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)",
+        (app_record['mentor_id'], "Application Withdrawn", notif_msg)
+    )
+
+    flash("Application withdrawn successfully.", "info")
     return redirect(url_for('applications.list_applications'))
