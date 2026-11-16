@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date, time, timedelta
 from flask import render_template, request, redirect, url_for, flash
 from app.blueprints.schedule import schedule_bp
 from app.db import fetch_one, fetch_all, execute_query
@@ -57,14 +57,104 @@ def delete_availability(slot_id):
     flash("Availability slot removed.", "info")
     return redirect(url_for('schedule.manage_availability'))
 
+BOOKING_WEEKS_AHEAD = 6  # how many upcoming weeks a mentee can book into
+
+
+def _to_time(value):
+    """MySQL returns TIME columns as timedelta, the demo DB as 'HH:MM' or 'HH:MM:SS' strings."""
+    if isinstance(value, time):
+        return value
+    if isinstance(value, timedelta):
+        return (datetime.min + value).time()
+    return time.fromisoformat(str(value))
+
+
+def _to_datetime(value):
+    """MySQL returns DATETIME as datetime objects, the demo DB as strings."""
+    if isinstance(value, datetime):
+        return value
+    return datetime.fromisoformat(str(value))
+
+
+def _active_windows(mentor_id):
+    return fetch_all(
+        """
+        SELECT id, day_of_week, start_time, end_time
+        FROM mentor_availability
+        WHERE mentor_id = %s AND is_active = TRUE
+        ORDER BY day_of_week, start_time
+        """,
+        (mentor_id,)
+    )
+
+
+def _mentor_has_overlap(mentor_id, start_dt, end_dt):
+    """True if the mentor already has a SCHEDULED meeting overlapping [start_dt, end_dt)."""
+    overlap_sql = """
+        SELECT m.id
+        FROM meetings m
+        JOIN mentorship_relations mr ON m.relation_id = mr.id
+        WHERE mr.mentor_id = %s
+          AND m.status = 'SCHEDULED'
+          AND m.scheduled_start < %s
+          AND m.scheduled_end > %s
+    """
+    return fetch_one(overlap_sql, (mentor_id, end_dt, start_dt)) is not None
+
+
+def _upcoming_slots(mentor_id, windows):
+    """
+    Turns the mentor's recurring weekly windows into concrete bookable slots
+    for the next BOOKING_WEEKS_AHEAD weeks, grouped by week.
+    Slots already taken by another meeting are marked unavailable; past slots are skipped.
+    """
+    now = datetime.now()
+    this_monday = now.date() - timedelta(days=now.weekday())
+
+    booked_rows = fetch_all(
+        """
+        SELECT m.scheduled_start, m.scheduled_end
+        FROM meetings m
+        JOIN mentorship_relations mr ON m.relation_id = mr.id
+        WHERE mr.mentor_id = %s AND m.status = 'SCHEDULED' AND m.scheduled_end > %s
+        """,
+        (mentor_id, now)
+    )
+    booked = [(_to_datetime(r['scheduled_start']), _to_datetime(r['scheduled_end'])) for r in booked_rows]
+
+    weeks = []
+    for w in range(BOOKING_WEEKS_AHEAD):
+        week_start = this_monday + timedelta(weeks=w)
+        slots = []
+        for win in windows:
+            day = week_start + timedelta(days=win['day_of_week'])
+            start_dt = datetime.combine(day, _to_time(win['start_time']))
+            end_dt = datetime.combine(day, _to_time(win['end_time']))
+            if start_dt <= now:
+                continue
+            taken = any(b_start < end_dt and b_end > start_dt for b_start, b_end in booked)
+            slots.append({
+                'value': f"{win['id']}|{day.isoformat()}",
+                'label': f"{DAYS_OF_WEEK[win['day_of_week']]} {day.strftime('%d %b')}, "
+                         f"{start_dt.strftime('%H:%M')} - {end_dt.strftime('%H:%M')}",
+                'taken': taken,
+            })
+        if slots:
+            weeks.append({'label': f"Week of {week_start.strftime('%d %b %Y')}", 'slots': slots})
+    return weeks
+
+
 @schedule_bp.route('/relations/<int:relation_id>/meetings/book', methods=['GET', 'POST'])
 @login_required
 def book_meeting(relation_id):
-    """Book a new session under an active relationship (Member 5 table: meetings)."""
+    """
+    CREATE a meeting under an active relationship (FR-12).
+    The user picks a week and one of the mentor's availability windows;
+    day and time always come from the mentor's window, never typed by hand.
+    """
     user = get_current_user()
     user_id = user['id']
 
-    # Fetch relation
     rel_sql = """
         SELECT mr.id, mr.mentee_id, mr.mentor_id, mr.status,
                mentor.first_name AS mentor_first, mentor.last_name AS mentor_last,
@@ -83,58 +173,67 @@ def book_meeting(relation_id):
         flash("Unauthorized.", "danger")
         return redirect(url_for('relations.list_relations'))
 
+    windows = _active_windows(rel['mentor_id'])
+
     if request.method == 'POST':
-        start_str = request.form.get('scheduled_start')
-        end_str = request.form.get('scheduled_end')
+        slot = request.form.get('slot', '')
         agenda = request.form.get('agenda', '').strip()
         meeting_link = request.form.get('meeting_link', '').strip() or 'https://meet.jit.si/mentor-session'
+        back = redirect(url_for('schedule.book_meeting', relation_id=relation_id))
 
+        if not agenda:
+            flash("Please enter an agenda for the session.", "warning")
+            return back
+
+        # slot looks like "<window_id>|<YYYY-MM-DD>"
         try:
-            start_dt = datetime.fromisoformat(start_str)
-            end_dt = datetime.fromisoformat(end_str)
-        except (ValueError, TypeError):
-            flash("Invalid date and time format.", "danger")
-            return redirect(url_for('schedule.book_meeting', relation_id=relation_id))
+            window_id_str, day_str = slot.split('|')
+            window_id = int(window_id_str)
+            day = date.fromisoformat(day_str)
+        except ValueError:
+            flash("Please choose one of the mentor's available slots.", "danger")
+            return back
 
-        if end_dt <= start_dt:
-            flash("Meeting end time must be after start time.", "warning")
-            return redirect(url_for('schedule.book_meeting', relation_id=relation_id))
+        # FR-12: the window must be an ACTIVE window of THIS mentor, on the right weekday
+        window = next((w for w in windows if w['id'] == window_id), None)
+        if window is None:
+            flash("That availability window does not exist or is no longer active.", "danger")
+            return back
+        if day.weekday() != window['day_of_week']:
+            flash("The chosen date does not fall on the mentor's available day.", "danger")
+            return back
 
-        # Check for overlapping meetings for this mentor
-        overlap_sql = """
-            SELECT m.id 
-            FROM meetings m
-            JOIN mentorship_relations mr ON m.relation_id = mr.id
-            WHERE mr.mentor_id = %s AND m.status = 'SCHEDULED'
-              AND (
-                  (m.scheduled_start < %s AND m.scheduled_end > %s)
-              )
-        """
-        overlap = fetch_one(overlap_sql, (rel['mentor_id'], end_dt, start_dt))
-        if overlap:
-            flash("The mentor already has a scheduled meeting during this exact time slot. Please pick another time.", "warning")
-            return redirect(url_for('schedule.book_meeting', relation_id=relation_id))
+        start_dt = datetime.combine(day, _to_time(window['start_time']))
+        end_dt = datetime.combine(day, _to_time(window['end_time']))
+        last_bookable_day = date.today() + timedelta(weeks=BOOKING_WEEKS_AHEAD)
+        if start_dt <= datetime.now() or day > last_bookable_day:
+            flash("That slot is not bookable (in the past or too far ahead).", "warning")
+            return back
 
-        # Insert meeting using raw SQL
-        insert_meeting_sql = """
+        # Conflict detection: the mentor cannot have two meetings at the same time
+        if _mentor_has_overlap(rel['mentor_id'], start_dt, end_dt):
+            flash("That slot is already booked. Please pick another one.", "warning")
+            return back
+
+        execute_query(
+            """
             INSERT INTO meetings (relation_id, scheduled_start, scheduled_end, meeting_link, agenda, status)
             VALUES (%s, %s, %s, %s, %s, 'SCHEDULED')
-        """
-        execute_query(insert_meeting_sql, (relation_id, start_dt, end_dt, meeting_link, agenda))
+            """,
+            (relation_id, start_dt, end_dt, meeting_link, agenda)
+        )
 
-        # Notify the other party
         target_notify_id = rel['mentee_id'] if user_id == rel['mentor_id'] else rel['mentor_id']
         notif_msg = f"A new mentorship session has been scheduled for {start_dt.strftime('%B %d, %Y at %H:%M')}."
-        execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)", (target_notify_id, "Meeting Scheduled", notif_msg))
+        execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)",
+                      (target_notify_id, "Meeting Scheduled", notif_msg))
 
         flash("Meeting successfully scheduled!", "success")
         return redirect(url_for('relations.relation_detail', relation_id=relation_id))
 
-    # Fetch mentor's active availability windows to display as reference
-    avail_sql = "SELECT day_of_week, start_time, end_time FROM mentor_availability WHERE mentor_id = %s AND is_active = TRUE ORDER BY day_of_week"
-    avail = fetch_all(avail_sql, (rel['mentor_id'],))
+    weeks = _upcoming_slots(rel['mentor_id'], windows)
+    return render_template('schedule/book.html', rel=rel, availability=windows, weeks=weeks, days=DAYS_OF_WEEK)
 
-    return render_template('schedule/book.html', rel=rel, availability=avail, days=DAYS_OF_WEEK)
 
 @schedule_bp.route('/meetings/<int:meeting_id>/status', methods=['POST'])
 @login_required
