@@ -3,6 +3,7 @@
 {% block title %}Mentorship Workspace — MentorMatch{% endblock %}
 
 {% block content %}
+{% set notes_map = notes_by_meeting(rel.id) %}
 <div class="row g-4">
     <!-- Header Card -->
     <div class="col-12">
@@ -108,17 +109,56 @@
                         </div>
 
                         <!-- Meeting Notes Section -->
+                        {% set meeting_notes = notes_map.get(m.id, []) %}
+                        {% set my_note_exists = meeting_notes | selectattr('author_id', 'equalto', user.id) | list | length > 0 %}
                         <div class="mt-3 pt-3 border-top">
-                            {% if m.note_summary %}
-                            <div class="bg-light p-3 rounded">
-                                <strong class="small text-primary d-block mb-1"><i class="bi bi-journal-text"></i> Session Minutes:</strong>
-                                <p class="small mb-2">{{ m.note_summary }}</p>
-                                {% if m.action_items %}
+                            {% for n in meeting_notes %}
+                            <div class="bg-light p-3 rounded mb-2">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <strong class="small text-primary d-block mb-1"><i class="bi bi-journal-text"></i> Session Minutes by {{ n.first_name }} {{ n.last_name }}:</strong>
+                                    {% if n.author_id == user.id or user.role == 'ADMIN' %}
+                                    <div class="d-flex gap-1">
+                                        {% if n.author_id == user.id %}
+                                        <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="collapse" data-bs-target="#editNote{{ n.id }}">Edit</button>
+                                        {% endif %}
+                                        <button class="btn btn-sm btn-outline-danger py-0" data-bs-toggle="modal" data-bs-target="#deleteNoteModal{{ n.id }}">Delete</button>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <p class="small mb-2" style="white-space: pre-line;">{{ n.summary }}</p>
+                                {% if n.action_items %}
                                 <strong class="small text-danger d-block mb-1"><i class="bi bi-list-check"></i> Action Items:</strong>
-                                <p class="small mb-0" style="white-space: pre-line;">{{ m.action_items }}</p>
+                                <p class="small mb-0" style="white-space: pre-line;">{{ n.action_items }}</p>
+                                {% endif %}
+
+                                {% if n.author_id == user.id %}
+                                <div class="collapse mt-2" id="editNote{{ n.id }}">
+                                    <form method="POST" action="{{ url_for('schedule.edit_meeting_note', note_id=n.id) }}">
+                                        <textarea class="form-control form-control-sm mb-2" name="summary" rows="2" required>{{ n.summary }}</textarea>
+                                        <textarea class="form-control form-control-sm mb-2" name="action_items" rows="2" placeholder="Action items">{{ n.action_items or '' }}</textarea>
+                                        <button type="submit" class="btn btn-sm btn-primary">Save Changes</button>
+                                    </form>
+                                </div>
+                                {% endif %}
+                                {% if n.author_id == user.id or user.role == 'ADMIN' %}
+                                <div class="modal fade" id="deleteNoteModal{{ n.id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-sm">
+                                        <div class="modal-content">
+                                            <div class="modal-body small">Delete these meeting notes? This cannot be undone.</div>
+                                            <div class="modal-footer py-2">
+                                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Keep</button>
+                                                <form method="POST" action="{{ url_for('schedule.delete_meeting_note', note_id=n.id) }}">
+                                                    <button type="submit" class="btn btn-danger btn-sm">Delete Notes</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                                 {% endif %}
                             </div>
-                            {% elif m.status == 'COMPLETED' %}
+                            {% endfor %}
+
+                            {% if m.status == 'COMPLETED' and not my_note_exists and user.role != 'ADMIN' %}
                             <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#addNote{{ m.id }}">
                                 + Add Notes & Action Items
                             </button>

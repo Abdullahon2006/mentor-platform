@@ -284,35 +284,126 @@ def update_meeting_status(meeting_id):
     flash(f"Meeting status updated to {new_status}.", "info")
     return redirect(url_for('relations.relation_detail', relation_id=m['relation_id']))
 
+# ---------------------------------------------------------------------
+# Meeting notes CRUD (FR-14, auxiliary table meeting_notes)
+# ---------------------------------------------------------------------
+
+def _meeting_with_participants(meeting_id):
+    return fetch_one(
+        """
+        SELECT m.id, m.relation_id, m.status, mr.mentee_id, mr.mentor_id
+        FROM meetings m
+        JOIN mentorship_relations mr ON m.relation_id = mr.id
+        WHERE m.id = %s
+        """,
+        (meeting_id,)
+    )
+
+
+def _note_with_meeting(note_id):
+    return fetch_one(
+        """
+        SELECT mn.id, mn.author_id, m.relation_id
+        FROM meeting_notes mn
+        JOIN meetings m ON mn.meeting_id = m.id
+        WHERE mn.id = %s
+        """,
+        (note_id,)
+    )
+
+
+@schedule_bp.app_template_global()
+def notes_by_meeting(relation_id):
+    """
+    READ: all notes of one mentorship in a single query, returned as
+    {meeting_id: [note, ...]} so the mentorship page can show them under each meeting.
+    """
+    rows = fetch_all(
+        """
+        SELECT mn.id, mn.meeting_id, mn.author_id, mn.summary, mn.action_items, mn.created_at,
+               u.first_name, u.last_name
+        FROM meeting_notes mn
+        JOIN meetings m ON mn.meeting_id = m.id
+        JOIN users u ON mn.author_id = u.id
+        WHERE m.relation_id = %s
+        ORDER BY mn.created_at, mn.id
+        """,
+        (relation_id,)
+    )
+    grouped = {}
+    for row in rows:
+        grouped.setdefault(row['meeting_id'], []).append(row)
+    return grouped
+
+
 @schedule_bp.route('/meetings/<int:meeting_id>/notes', methods=['POST'])
 @login_required
 def add_meeting_notes(meeting_id):
-    """Add discussion summary and action items to a completed meeting (Member 5 aux table: meeting_notes)."""
+    """CREATE: a participant records the summary and action items of a completed meeting."""
     user = get_current_user()
     user_id = user['id']
     summary = request.form.get('summary', '').strip()
     action_items = request.form.get('action_items', '').strip()
 
-    if not summary:
-        flash("Summary is required.", "danger")
-        return redirect(url_for('relations.list_relations'))
-
-    # Verify participation
-    sql = """
-        SELECT m.id, m.relation_id, mr.mentee_id, mr.mentor_id
-        FROM meetings m
-        JOIN mentorship_relations mr ON m.relation_id = mr.id
-        WHERE m.id = %s
-    """
-    m = fetch_one(sql, (meeting_id,))
+    m = _meeting_with_participants(meeting_id)
     if not m or (user['role'] != 'ADMIN' and user_id not in (m['mentee_id'], m['mentor_id'])):
         flash("Unauthorized.", "danger")
         return redirect(url_for('relations.list_relations'))
 
-    insert_note_sql = """
+    back = redirect(url_for('relations.relation_detail', relation_id=m['relation_id']))
+    if m['status'] != 'COMPLETED':
+        flash("Notes can only be added to completed meetings.", "warning")
+        return back
+    if not summary:
+        flash("Summary is required.", "danger")
+        return back
+
+    execute_query(
+        """
         INSERT INTO meeting_notes (meeting_id, author_id, summary, action_items)
         VALUES (%s, %s, %s, %s)
-    """
-    execute_query(insert_note_sql, (meeting_id, user_id, summary, action_items))
+        """,
+        (meeting_id, user_id, summary, action_items)
+    )
     flash("Meeting notes and action items saved!", "success")
-    return redirect(url_for('relations.relation_detail', relation_id=m['relation_id']))
+    return back
+
+
+@schedule_bp.route('/notes/<int:note_id>/edit', methods=['POST'])
+@login_required
+def edit_meeting_note(note_id):
+    """UPDATE: only the author of a note can change it."""
+    user = get_current_user()
+    note = _note_with_meeting(note_id)
+    if not note or note['author_id'] != user['id']:
+        flash("You can only edit your own notes.", "danger")
+        return redirect(url_for('relations.list_relations'))
+
+    summary = request.form.get('summary', '').strip()
+    action_items = request.form.get('action_items', '').strip()
+    back = redirect(url_for('relations.relation_detail', relation_id=note['relation_id']))
+    if not summary:
+        flash("Summary is required.", "danger")
+        return back
+
+    execute_query(
+        "UPDATE meeting_notes SET summary = %s, action_items = %s WHERE id = %s AND author_id = %s",
+        (summary, action_items, note_id, user['id'])
+    )
+    flash("Meeting notes updated.", "success")
+    return back
+
+
+@schedule_bp.route('/notes/<int:note_id>/delete', methods=['POST'])
+@login_required
+def delete_meeting_note(note_id):
+    """DELETE: the author (or an admin) removes a note."""
+    user = get_current_user()
+    note = _note_with_meeting(note_id)
+    if not note or (note['author_id'] != user['id'] and user['role'] != 'ADMIN'):
+        flash("You can only delete your own notes.", "danger")
+        return redirect(url_for('relations.list_relations'))
+
+    execute_query("DELETE FROM meeting_notes WHERE id = %s", (note_id,))
+    flash("Meeting notes deleted.", "info")
+    return redirect(url_for('relations.relation_detail', relation_id=note['relation_id']))
