@@ -201,9 +201,21 @@
                             {% if r.reviewer_id == user.id %}
                             <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="collapse" data-bs-target="#editReview{{ r.id }}">Edit</button>
                             {% endif %}
-                            <form method="POST" action="{{ url_for('reviews.delete_review', review_id=r.id) }}" onsubmit="return confirm('Delete this review?');">
-                                <button type="submit" class="btn btn-sm btn-outline-danger py-0">Delete</button>
-                            </form>
+                            <button class="btn btn-sm btn-outline-danger py-0" data-bs-toggle="modal" data-bs-target="#deleteReviewModal{{ r.id }}">Delete</button>
+                        </div>
+                        <!-- Delete confirmation (Bootstrap modal instead of the browser's confirm() popup) -->
+                        <div class="modal fade" id="deleteReviewModal{{ r.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-sm">
+                                <div class="modal-content">
+                                    <div class="modal-body small">Delete this review? This cannot be undone.</div>
+                                    <div class="modal-footer py-2">
+                                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Keep</button>
+                                        <form method="POST" action="{{ url_for('reviews.delete_review', review_id=r.id) }}">
+                                            <button type="submit" class="btn btn-danger btn-sm">Delete Review</button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         {% if r.reviewer_id == user.id %}
                         <div class="collapse mt-2" id="editReview{{ r.id }}">
