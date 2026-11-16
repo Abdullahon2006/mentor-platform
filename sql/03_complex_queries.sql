@@ -249,44 +249,62 @@ ORDER BY utilization_rate_pct DESC;
 -- Tables Involved: users, mentorship_relations, meetings, reviews_and_ratings
 --
 -- Purpose:
--- Drives the platform-wide public mentor leaderboard, ranking mentors based
--- on multidimensional performance metrics:
--- 1. Average review rating from post-session feedback.
+-- Drives the platform-wide public mentor leaderboard, ranking mentors by:
+-- 1. Average rating received from mentees.
 -- 2. Total completed mentoring sessions held.
--- 3. Total active and completed mentorship relations.
--- 4. Count of unique reviews received.
+-- 3. Total, active and completed mentorship relations.
+-- 4. Number of reviews received.
+--
+-- Design note (fan-out): a mentor's relation has MANY meetings and MANY
+-- reviews. Joining both one-to-many tables in one flat JOIN multiplies the
+-- rows (meetings x reviews), which inflates SUM/COUNT and skews AVG.
+-- Each metric is therefore aggregated in its own derived table (one row per
+-- mentor) and only then joined to users.
 --
 -- Relational operations demonstrated:
--- - INNER JOIN to active or historic mentorship relations
--- - Multiple conditional LEFT JOINs for meetings and reviews
--- - Conditional aggregation via `SUM(CASE WHEN ...)`
--- - Aggregation functions (`COUNT(DISTINCT ...)`, `AVG(...)`, `COALESCE(...)`)
--- - `GROUP BY` with composite columns and `HAVING` threshold
+-- - Nested queries: three derived tables (subqueries in FROM)
+-- - INNER JOIN (mentors with at least one relation) and LEFT JOINs
+--   (mentors without meetings/reviews still appear, with 0)
+-- - Conditional aggregation via SUM(CASE WHEN ...)
+-- - Aggregates COUNT, AVG, ROUND, COALESCE for missing values
+-- - GROUP BY inside each derived table, multi-key ORDER BY for ranking
 -- =====================================================================
 
-SELECT 
+SELECT
     u.id AS mentor_id,
     CONCAT(u.first_name, ' ', u.last_name) AS mentor_name,
     u.current_title,
     u.organization,
-    COUNT(DISTINCT mr.id) AS total_mentorships,
-    SUM(CASE WHEN mr.status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed_mentorships,
-    SUM(CASE WHEN mr.status = 'ACTIVE' THEN 1 ELSE 0 END) AS active_mentorships,
-    COUNT(DISTINCT m.id) AS total_meetings_held,
-    COALESCE(ROUND(AVG(rr.rating), 2), 0.0) AS avg_rating,
-    COUNT(DISTINCT rr.id) AS total_reviews_received
+    rel.total_mentorships,
+    rel.completed_mentorships,
+    rel.active_mentorships,
+    COALESCE(mt.meetings_held, 0) AS total_meetings_held,
+    COALESCE(rv.avg_rating, 0.0) AS avg_rating,
+    COALESCE(rv.review_count, 0) AS total_reviews_received
 FROM users u
-JOIN mentorship_relations mr ON u.id = mr.mentor_id
-LEFT JOIN meetings m ON mr.id = m.relation_id AND m.status = 'COMPLETED'
-LEFT JOIN reviews_and_ratings rr ON mr.id = rr.relation_id AND rr.reviewee_id = u.id
+-- (1) one row per mentor: how many mentorships, and in which state
+JOIN (
+    SELECT mentor_id,
+           COUNT(*) AS total_mentorships,
+           SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed_mentorships,
+           SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) AS active_mentorships
+    FROM mentorship_relations
+    GROUP BY mentor_id
+) rel ON rel.mentor_id = u.id
+-- (2) one row per mentor: completed meetings across all of their mentorships
+LEFT JOIN (
+    SELECT mr.mentor_id, COUNT(*) AS meetings_held
+    FROM meetings m
+    JOIN mentorship_relations mr ON m.relation_id = mr.id
+    WHERE m.status = 'COMPLETED'
+    GROUP BY mr.mentor_id
+) mt ON mt.mentor_id = u.id
+-- (3) one row per mentor: reviews written ABOUT the mentor
+LEFT JOIN (
+    SELECT mr.mentor_id, ROUND(AVG(rr.rating), 2) AS avg_rating, COUNT(*) AS review_count
+    FROM reviews_and_ratings rr
+    JOIN mentorship_relations mr ON rr.relation_id = mr.id AND rr.reviewee_id = mr.mentor_id
+    GROUP BY mr.mentor_id
+) rv ON rv.mentor_id = u.id
 WHERE u.role = 'MENTOR'
-GROUP BY 
-    u.id, 
-    u.first_name, 
-    u.last_name, 
-    u.current_title, 
-    u.organization
-HAVING total_mentorships >= 1
-ORDER BY 
-    avg_rating DESC, 
-    total_meetings_held DESC;
+ORDER BY avg_rating DESC, total_meetings_held DESC, total_reviews_received DESC;
