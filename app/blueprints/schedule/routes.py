@@ -145,13 +145,13 @@ def update_meeting_status(meeting_id):
     new_status = request.form.get('status')
     cancellation_reason = request.form.get('cancellation_reason', '').strip()
 
-    if new_status not in ('SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'):
+    if new_status not in ('COMPLETED', 'CANCELLED', 'NO_SHOW'):
         flash("Invalid status.", "danger")
         return redirect(url_for('relations.list_relations'))
 
     # Verify authorization
     sql = """
-        SELECT m.id, m.relation_id, mr.mentee_id, mr.mentor_id
+        SELECT m.id, m.relation_id, m.status, mr.mentee_id, mr.mentor_id
         FROM meetings m
         JOIN mentorship_relations mr ON m.relation_id = mr.id
         WHERE m.id = %s
@@ -160,6 +160,16 @@ def update_meeting_status(meeting_id):
     if not m or (user['role'] != 'ADMIN' and user_id not in (m['mentee_id'], m['mentor_id'])):
         flash("Unauthorized.", "danger")
         return redirect(url_for('relations.list_relations'))
+
+    # Only a SCHEDULED meeting can move to a final state (COMPLETED / CANCELLED / NO_SHOW)
+    if m['status'] != 'SCHEDULED':
+        flash(f"This meeting is already {m['status']} and can no longer be changed.", "warning")
+        return redirect(url_for('relations.relation_detail', relation_id=m['relation_id']))
+
+    # FR-13: a cancellation must always carry a reason
+    if new_status == 'CANCELLED' and not cancellation_reason:
+        flash("Please provide a reason for cancelling the meeting.", "danger")
+        return redirect(url_for('relations.relation_detail', relation_id=m['relation_id']))
 
     update_sql = """
         UPDATE meetings 
