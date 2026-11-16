@@ -97,6 +97,50 @@ def delete_review(review_id):
     return redirect(url_for('relations.relation_detail', relation_id=review['relation_id']))
 
 
+# CQ-05: Mentor Leaderboard & Engagement Metrics (Raimbek Erik). Kept as a
+# module constant so tests/test_meetings.py can run the exact same SQL.
+CQ05_LEADERBOARD_SQL = """
+    SELECT
+        u.id AS mentor_id,
+        CONCAT(u.first_name, ' ', u.last_name) AS mentor_name,
+        u.current_title,
+        u.organization,
+        rel.total_mentorships,
+        rel.completed_mentorships,
+        rel.active_mentorships,
+        COALESCE(mt.meetings_held, 0) AS total_meetings_held,
+        COALESCE(rv.avg_rating, 0.0) AS avg_rating,
+        COALESCE(rv.review_count, 0) AS total_reviews_received
+    FROM users u
+    -- (1) one row per mentor: how many mentorships, and in which state
+    JOIN (
+        SELECT mentor_id,
+               COUNT(*) AS total_mentorships,
+               SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed_mentorships,
+               SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) AS active_mentorships
+        FROM mentorship_relations
+        GROUP BY mentor_id
+    ) rel ON rel.mentor_id = u.id
+    -- (2) one row per mentor: completed meetings across all of their mentorships
+    LEFT JOIN (
+        SELECT mr.mentor_id, COUNT(*) AS meetings_held
+        FROM meetings m
+        JOIN mentorship_relations mr ON m.relation_id = mr.id
+        WHERE m.status = 'COMPLETED'
+        GROUP BY mr.mentor_id
+    ) mt ON mt.mentor_id = u.id
+    -- (3) one row per mentor: reviews written ABOUT the mentor
+    LEFT JOIN (
+        SELECT mr.mentor_id, ROUND(AVG(rr.rating), 2) AS avg_rating, COUNT(*) AS review_count
+        FROM reviews_and_ratings rr
+        JOIN mentorship_relations mr ON rr.relation_id = mr.id AND rr.reviewee_id = mr.mentor_id
+        GROUP BY mr.mentor_id
+    ) rv ON rv.mentor_id = u.id
+    WHERE u.role = 'MENTOR'
+    ORDER BY avg_rating DESC, total_meetings_held DESC, total_reviews_received DESC
+"""
+
+
 @reviews_bp.route('/leaderboard')
 def leaderboard():
     """
@@ -105,47 +149,7 @@ def leaderboard():
     BEFORE joining, so meetings and reviews cannot multiply each other's rows
     (the "fan-out" problem of joining two one-to-many tables at once).
     """
-    complex_sql = """
-        SELECT
-            u.id AS mentor_id,
-            CONCAT(u.first_name, ' ', u.last_name) AS mentor_name,
-            u.current_title,
-            u.organization,
-            rel.total_mentorships,
-            rel.completed_mentorships,
-            rel.active_mentorships,
-            COALESCE(mt.meetings_held, 0) AS total_meetings_held,
-            COALESCE(rv.avg_rating, 0.0) AS avg_rating,
-            COALESCE(rv.review_count, 0) AS total_reviews_received
-        FROM users u
-        -- (1) one row per mentor: how many mentorships, and in which state
-        JOIN (
-            SELECT mentor_id,
-                   COUNT(*) AS total_mentorships,
-                   SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) AS completed_mentorships,
-                   SUM(CASE WHEN status = 'ACTIVE' THEN 1 ELSE 0 END) AS active_mentorships
-            FROM mentorship_relations
-            GROUP BY mentor_id
-        ) rel ON rel.mentor_id = u.id
-        -- (2) one row per mentor: completed meetings across all of their mentorships
-        LEFT JOIN (
-            SELECT mr.mentor_id, COUNT(*) AS meetings_held
-            FROM meetings m
-            JOIN mentorship_relations mr ON m.relation_id = mr.id
-            WHERE m.status = 'COMPLETED'
-            GROUP BY mr.mentor_id
-        ) mt ON mt.mentor_id = u.id
-        -- (3) one row per mentor: reviews written ABOUT the mentor
-        LEFT JOIN (
-            SELECT mr.mentor_id, ROUND(AVG(rr.rating), 2) AS avg_rating, COUNT(*) AS review_count
-            FROM reviews_and_ratings rr
-            JOIN mentorship_relations mr ON rr.relation_id = mr.id AND rr.reviewee_id = mr.mentor_id
-            GROUP BY mr.mentor_id
-        ) rv ON rv.mentor_id = u.id
-        WHERE u.role = 'MENTOR'
-        ORDER BY avg_rating DESC, total_meetings_held DESC, total_reviews_received DESC
-    """
-    leaderboard_data = fetch_all(complex_sql)
+    leaderboard_data = fetch_all(CQ05_LEADERBOARD_SQL)
     return render_template('reviews/leaderboard.html', leaderboard=leaderboard_data)
 
 
