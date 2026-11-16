@@ -195,6 +195,30 @@
                             </span>
                         </div>
                         <p class="small text-secondary mb-0">{{ r.review_text }}</p>
+
+                        {% if r.reviewer_id == user.id or user.role == 'ADMIN' %}
+                        <div class="d-flex gap-2 mt-2">
+                            {% if r.reviewer_id == user.id %}
+                            <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="collapse" data-bs-target="#editReview{{ r.id }}">Edit</button>
+                            {% endif %}
+                            <form method="POST" action="{{ url_for('reviews.delete_review', review_id=r.id) }}" onsubmit="return confirm('Delete this review?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger py-0">Delete</button>
+                            </form>
+                        </div>
+                        {% if r.reviewer_id == user.id %}
+                        <div class="collapse mt-2" id="editReview{{ r.id }}">
+                            <form method="POST" action="{{ url_for('reviews.edit_review', review_id=r.id) }}" class="p-2 bg-light rounded">
+                                <select class="form-select form-select-sm mb-2" name="rating" required>
+                                    {% for val in [5, 4, 3, 2, 1] %}
+                                    <option value="{{ val }}" {% if r.rating == val %}selected{% endif %}>{{ val }} star{{ 's' if val > 1 }}</option>
+                                    {% endfor %}
+                                </select>
+                                <textarea class="form-control form-control-sm mb-2" name="review_text" rows="2">{{ r.review_text or '' }}</textarea>
+                                <button type="submit" class="btn btn-sm btn-warning w-100">Save Changes</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                        {% endif %}
                     </li>
                     {% endfor %}
                 </ul>
