@@ -250,7 +250,7 @@ def update_meeting_status(meeting_id):
 
     # Verify authorization
     sql = """
-        SELECT m.id, m.relation_id, m.status, mr.mentee_id, mr.mentor_id
+        SELECT m.id, m.relation_id, m.status, m.scheduled_start, mr.mentee_id, mr.mentor_id
         FROM meetings m
         JOIN mentorship_relations mr ON m.relation_id = mr.id
         WHERE m.id = %s
@@ -263,6 +263,11 @@ def update_meeting_status(meeting_id):
     # Only a SCHEDULED meeting can move to a final state (COMPLETED / CANCELLED / NO_SHOW)
     if m['status'] != 'SCHEDULED':
         flash(f"This meeting is already {m['status']} and can no longer be changed.", "warning")
+        return redirect(url_for('relations.relation_detail', relation_id=m['relation_id']))
+
+    # A meeting can only be COMPLETED / NO_SHOW once it has actually started
+    if new_status in ('COMPLETED', 'NO_SHOW') and _to_datetime(m['scheduled_start']) > datetime.now():
+        flash("This meeting has not started yet, so it cannot be marked as completed or no-show.", "warning")
         return redirect(url_for('relations.relation_detail', relation_id=m['relation_id']))
 
     # FR-13: a cancellation must always carry a reason
