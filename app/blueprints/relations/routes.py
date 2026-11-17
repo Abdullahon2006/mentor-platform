@@ -85,12 +85,12 @@ def relation_detail(relation_id):
         flash("Access unauthorized.", "danger")
         return redirect(url_for('relations.list_relations'))
 
-    # Fetch meetings under this relationship
+    # Fetch meetings under this relationship (notes are loaded per meeting by the
+    # schedule blueprint's notes_by_meeting() template helper, so a meeting with
+    # several notes is not listed several times)
     meetings_sql = """
-        SELECT m.id, m.scheduled_start, m.scheduled_end, m.meeting_link, m.agenda, m.status, m.cancellation_reason,
-               mn.summary AS note_summary, mn.action_items
+        SELECT m.id, m.scheduled_start, m.scheduled_end, m.meeting_link, m.agenda, m.status, m.cancellation_reason
         FROM meetings m
-        LEFT JOIN meeting_notes mn ON m.id = mn.meeting_id
         WHERE m.relation_id = %s
         ORDER BY m.scheduled_start DESC
     """
