@@ -1,0 +1,61 @@
+{% if dashboard_summary %}
+<div class="col-12">
+  <div class="row g-3">
+    <div class="col-sm-6 col-xl-3">
+      <div class="card h-100 border-primary shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small">
+            <i class="bi bi-bell"></i>
+            Unread Notifications
+          </div>
+          <div class="fs-3 fw-bold text-primary">
+            {{ dashboard_summary.unread_notifications_count }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+      <div class="card h-100 border-warning shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small">
+            <i class="bi bi-inbox"></i>
+            Pending Applications
+          </div>
+          <div class="fs-3 fw-bold text-warning">
+            {{ dashboard_summary.pending_applications_count }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+      <div class="card h-100 border-success shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small">
+            <i class="bi bi-people"></i>
+            Active Mentorships
+          </div>
+          <div class="fs-3 fw-bold text-success">
+            {{ dashboard_summary.active_mentorships_count }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-xl-3">
+      <div class="card h-100 border-info shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small">
+            <i class="bi bi-calendar-event"></i>
+            Meetings in Next 7 Days
+          </div>
+          <div class="fs-3 fw-bold text-info">
+            {{ dashboard_summary.upcoming_meetings_next_7_days }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}

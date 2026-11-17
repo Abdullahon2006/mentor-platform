@@ -15,6 +15,55 @@ def dashboard():
     user = get_current_user()
     user_id = user['id']
     role = user['role']
+    dashboard_summary_sql = """
+        SELECT
+            u.id AS user_id,
+            CONCAT(u.first_name, ' ', u.last_name) AS full_name,
+            u.email,
+            u.role,
+
+            (
+                SELECT COUNT(*)
+                FROM notifications n
+                WHERE n.user_id = u.id
+                AND n.is_read = FALSE
+            ) AS unread_notifications_count,
+
+            (
+                SELECT COUNT(*)
+                FROM mentorship_applications ma
+                WHERE (ma.mentee_id = u.id OR ma.mentor_id = u.id)
+                AND ma.status = 'PENDING'
+            ) AS pending_applications_count,
+
+            (
+                SELECT COUNT(*)
+                FROM mentorship_relations mr
+                WHERE (mr.mentee_id = u.id OR mr.mentor_id = u.id)
+                AND mr.status = 'ACTIVE'
+            ) AS active_mentorships_count,
+
+            (
+                SELECT COUNT(*)
+                FROM meetings m
+                JOIN mentorship_relations rel
+                    ON m.relation_id = rel.id
+                WHERE (rel.mentee_id = u.id OR rel.mentor_id = u.id)
+                AND m.status = 'SCHEDULED'
+                AND m.scheduled_start >= CURRENT_TIMESTAMP
+                AND m.scheduled_start <= DATE_ADD(
+                    CURRENT_TIMESTAMP,
+                    INTERVAL 7 DAY
+                )
+            ) AS upcoming_meetings_next_7_days
+
+        FROM users u
+        WHERE u.id = %s """
+
+    dashboard_summary = fetch_one(
+        dashboard_summary_sql,
+        (user_id,)
+    )
 
     # 1. Fetch unread and recent notifications (Member 1 table: notifications)
     notif_sql = """
@@ -84,6 +133,7 @@ def dashboard():
         return render_template(
             'dashboard/mentee_dashboard.html',
             user=user,
+            dashboard_summary=dashboard_summary,
             notifications=notifications,
             user_skills=user_skills,
             goals=goals,
@@ -137,6 +187,7 @@ def dashboard():
         return render_template(
             'dashboard/mentor_dashboard.html',
             user=user,
+            dashboard_summary=dashboard_summary,
             notifications=notifications,
             user_skills=user_skills,
             pending_apps=pending_apps,
@@ -148,7 +199,7 @@ def dashboard():
     else:
         # Admin dashboard
         counts_sql = """
-            SELECT 
+            SELECT
                 (SELECT COUNT(*) FROM users WHERE role = 'MENTEE') AS mentee_count,
                 (SELECT COUNT(*) FROM users WHERE role = 'MENTOR') AS mentor_count,
                 (SELECT COUNT(*) FROM mentorship_relations WHERE status = 'ACTIVE') AS active_relations_count,
@@ -156,7 +207,7 @@ def dashboard():
                 (SELECT COUNT(*) FROM skills) AS skills_count
         """
         stats = fetch_one(counts_sql)
-        return render_template('dashboard/admin_dashboard.html', user=user, stats=stats, notifications=notifications)
+        return render_template('dashboard/admin_dashboard.html', user=user, dashboard_summary=dashboard_summary, stats=stats, notifications=notifications)
 
 @profile_bp.route('/profile/edit', methods=['GET', 'POST'])
 @login_required
@@ -170,7 +221,7 @@ def edit_profile():
         bio = request.form.get('bio', '').strip()
 
         update_sql = """
-            UPDATE users 
+            UPDATE users
             SET first_name = %s, last_name = %s, current_title = %s, organization = %s, bio = %s
             WHERE id = %s
         """
@@ -181,9 +232,36 @@ def edit_profile():
     return render_template('dashboard/edit_profile.html', user=user)
 
 @profile_bp.route('/notifications/<int:notif_id>/read', methods=['POST'])
+
+
 @login_required
 def mark_notification_read(notif_id):
     user = get_current_user()
     update_sql = "UPDATE notifications SET is_read = TRUE WHERE id = %s AND user_id = %s"
     execute_query(update_sql, (notif_id, user['id']))
     return redirect(url_for('profile.dashboard'))
+
+
+@profile_bp.route('/notifications/read-all', methods=['POST'])
+@login_required
+def mark_all_notifications_read():
+    user = get_current_user()
+
+    update_sql = """
+        UPDATE notifications
+        SET is_read = TRUE
+        WHERE user_id = %s
+          AND is_read = FALSE
+    """
+    _, updated_count = execute_query(update_sql, (user['id'],))
+
+    if updated_count > 0:
+        flash(
+            f"{updated_count} notification(s) marked as read.",
+            "success"
+        )
+    else:
+        flash("You have no unread notifications.", "info")
+
+    return redirect(url_for('profile.dashboard'))
+

@@ -11,7 +11,7 @@ def browse_mentors():
     search_query = request.args.get('q', '').strip()
 
     base_sql = """
-        SELECT 
+        SELECT
             m.id, m.first_name, m.last_name, m.current_title, m.organization, m.bio,
             COALESCE(r.avg_rating, 0.0) AS avg_rating,
             COALESCE(r.total_reviews, 0) AS total_reviews,
@@ -24,7 +24,7 @@ def browse_mentors():
         ) r ON m.id = r.reviewee_id
         LEFT JOIN mentorship_relations rel ON m.id = rel.mentor_id AND rel.status = 'ACTIVE'
     """
-    
+
     where_clauses = ["m.role = 'MENTOR'"]
     params = []
 
@@ -54,7 +54,7 @@ def mentor_detail(mentor_id):
     """View mentor profile details, their skills, availability slots, and reviews."""
     mentor_sql = """
         SELECT id, first_name, last_name, current_title, organization, bio, created_at
-        FROM users 
+        FROM users
         WHERE id = %s AND role = 'MENTOR'
     """
     mentor = fetch_one(mentor_sql, (mentor_id,))
@@ -120,7 +120,7 @@ def manage_goals():
 
     if request.method == 'POST':
         action = request.form.get('action')
-        
+
         if action == 'create':
             title = request.form.get('title', '').strip()
             description = request.form.get('description', '').strip()
@@ -135,7 +135,7 @@ def manage_goals():
                 """
                 execute_query(insert_sql, (user_id, title, description, target_date))
                 flash("Goal created successfully!", "success")
-        
+
         elif action == 'update_status':
             goal_id = request.form.get('goal_id')
             new_status = request.form.get('status')
@@ -154,23 +154,23 @@ def manage_goals():
 
     # Complex Query 3: Mentee Goal Progress & Activity Correlation
     goals_sql = """
-        SELECT 
+        SELECT
             g.id, g.title, g.description, g.target_completion_date, g.status, g.created_at,
             COALESCE(CONCAT(m.first_name, ' ', m.last_name), 'No Mentor Assigned') AS assigned_mentor,
             m.id AS mentor_id,
             COUNT(DISTINCT mt.id) AS total_completed_sessions,
             MAX(mt.scheduled_start) AS latest_session_date
         FROM mentorship_goals g
-        LEFT JOIN mentorship_applications ma 
+        LEFT JOIN mentorship_applications ma
             ON g.id = ma.goal_id AND ma.status = 'ACCEPTED'
-        LEFT JOIN mentorship_relations mr 
+        LEFT JOIN mentorship_relations mr
             ON ma.id = mr.application_id
-        LEFT JOIN users m 
+        LEFT JOIN users m
             ON mr.mentor_id = m.id
-        LEFT JOIN meetings mt 
+        LEFT JOIN meetings mt
             ON mr.id = mt.relation_id AND mt.status = 'COMPLETED'
         WHERE g.mentee_id = %s
-        GROUP BY 
+        GROUP BY
             g.id, g.title, g.description, g.target_completion_date, g.status, g.created_at,
             m.id, m.first_name, m.last_name
         ORDER BY g.created_at DESC
@@ -295,7 +295,7 @@ def decide_application(app_id):
 
     # Update application status
     update_sql = """
-        UPDATE mentorship_applications 
+        UPDATE mentorship_applications
         SET status = %s, decided_at = NOW()
         WHERE id = %s
     """

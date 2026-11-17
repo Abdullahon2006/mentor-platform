@@ -122,7 +122,7 @@ def execute_query(sql, params=None, commit=True):
     """Executes a raw SQL statement (INSERT, UPDATE, DELETE)."""
     conn = get_db()
     mode = getattr(g, 'db_mode', 'MYSQL')
-    
+
     if mode == 'MYSQL':
         cursor = conn.cursor(dictionary=True)
         try:
