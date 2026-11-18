@@ -22,19 +22,28 @@
                         {% endfor %}
                     </ul>
                     {% else %}
-                    <span class="small text-muted">Mentor has not configured specific recurring hours. Please pick a suitable time.</span>
+                    <span class="small text-muted">This mentor has not published any availability windows yet, so no session can be booked.</span>
                     {% endif %}
                 </div>
 
+                {% if weeks %}
                 <form method="POST" action="{{ url_for('schedule.book_meeting', relation_id=rel.id) }}">
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Start Date & Time *</label>
-                            <input type="datetime-local" class="form-control" name="scheduled_start" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label small fw-semibold">End Date & Time *</label>
-                            <input type="datetime-local" class="form-control" name="scheduled_end" required>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Week & Session Slot *</label>
+                            <select class="form-select" name="slot" required>
+                                <option value="" selected disabled>Choose a week and one of the mentor's windows</option>
+                                {% for week in weeks %}
+                                <optgroup label="{{ week.label }}">
+                                    {% for s in week.slots %}
+                                    <option value="{{ s.value }}" {% if s.taken %}disabled{% endif %}>
+                                        {{ s.label }}{% if s.taken %} (already booked){% endif %}
+                                    </option>
+                                    {% endfor %}
+                                </optgroup>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text">Day and time are set by the mentor's availability. Booked slots are greyed out.</div>
                         </div>
 
                         <div class="col-12">
@@ -54,6 +63,9 @@
                         <button type="submit" class="btn btn-success px-4 fw-semibold">Confirm Booking</button>
                     </div>
                 </form>
+                {% else %}
+                <a href="{{ url_for('relations.relation_detail', relation_id=rel.id) }}" class="btn btn-outline-secondary">Back to mentorship</a>
+                {% endif %}
             </div>
         </div>
     </div>

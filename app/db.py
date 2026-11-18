@@ -106,13 +106,13 @@ def _adapt_sql_for_sqlite(sql):
     if "ON DUPLICATE KEY UPDATE" in adapted:
         if "user_skills" in adapted:
             adapted = re.sub(
-                r"ON DUPLICATE KEY UPDATE.*",
+                r"ON DUPLICATE KEY UPDATE[\s\S]*",
                 "ON CONFLICT(user_id, skill_id) DO UPDATE SET proficiency=excluded.proficiency, years_of_experience=excluded.years_of_experience",
                 adapted, flags=re.IGNORECASE
             )
         elif "reviews_and_ratings" in adapted:
             adapted = re.sub(
-                r"ON DUPLICATE KEY UPDATE.*",
+                r"ON DUPLICATE KEY UPDATE[\s\S]*",
                 "ON CONFLICT(relation_id, reviewer_id, reviewee_id) DO UPDATE SET rating=excluded.rating, review_text=excluded.review_text",
                 adapted, flags=re.IGNORECASE
             )
