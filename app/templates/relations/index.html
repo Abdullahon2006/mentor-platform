@@ -17,8 +17,8 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>Partner</th>
-                                <th>Role / Org</th>
+                                <th>{% if user.role == 'ADMIN' %}Mentee &rarr; Mentor{% else %}Partner{% endif %}</th>
+                                <th>{% if user.role == 'ADMIN' %}Ended{% else %}Role / Org{% endif %}</th>
                                 <th>Started</th>
                                 <th>Status</th>
                                 <th>Sessions</th>
@@ -28,12 +28,19 @@
                         <tbody>
                             {% for r in relations %}
                             <tr>
+                                {% if user.role == 'ADMIN' %}
+                                <td class="fw-bold text-dark">
+                                    {{ r.mentee_first }} {{ r.mentee_last }} <i class="bi bi-arrow-right text-muted"></i> {{ r.mentor_first }} {{ r.mentor_last }}
+                                </td>
+                                <td class="small text-muted">{{ r.end_date or '–' }}</td>
+                                {% else %}
                                 <td class="fw-bold text-dark">
                                     {{ r.first_name }} {{ r.last_name }}
                                 </td>
                                 <td>
                                     <span class="small text-muted">{{ r.current_title or '' }} &bull; {{ r.organization or '' }}</span>
                                 </td>
+                                {% endif %}
                                 <td class="small text-muted">{{ r.start_date }}</td>
                                 <td>
                                     <span class="badge {% if r.status == 'ACTIVE' %}bg-success{% elif r.status == 'COMPLETED' %}bg-info text-dark{% elif r.status == 'PAUSED' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
