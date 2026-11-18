@@ -5,16 +5,46 @@ from app.auth_util import login_required, role_required, get_current_user
 
 @skills_bp.route('/')
 def list_skills():
-    """Lists all skills categorized in the taxonomy."""
+    """Lists skills with optional name search and category filtering."""
+
+    search = request.args.get('search', '').strip()
+    category = request.args.get('category', '').strip()
+
     sql = """
-        SELECT s.id, s.name, s.category, s.description, COUNT(us.id) AS user_count
+        SELECT s.id, s.name, s.category, s.description,
+               COUNT(us.id) AS user_count
         FROM skills s
         LEFT JOIN user_skills us ON s.id = us.skill_id
+        WHERE 1 = 1
+    """
+    params = []
+
+    if search:
+        sql += " AND s.name LIKE %s"
+        params.append(f"%{search}%")
+
+    if category:
+        sql += " AND s.category = %s"
+        params.append(category)
+
+    sql += """
         GROUP BY s.id, s.name, s.category, s.description
         ORDER BY s.category, s.name
     """
-    skills = fetch_all(sql)
-    return render_template('skills/index.html', skills=skills)
+
+    skills = fetch_all(sql, tuple(params))
+
+    categories = fetch_all(
+        "SELECT DISTINCT category FROM skills ORDER BY category"
+    )
+
+    return render_template(
+        'skills/index.html',
+        skills=skills,
+        categories=categories,
+        selected_category=category,
+        search=search
+    )
 
 @skills_bp.route('/manage', methods=['GET', 'POST'])
 @login_required
@@ -28,20 +58,51 @@ def manage_user_skills():
         proficiency = request.form.get('proficiency', 'INTERMEDIATE')
         years_of_experience = request.form.get('years_of_experience', 0)
 
+
+        valid_proficiencies = {
+            'BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'
+        }
+
+        if proficiency not in valid_proficiencies:
+            flash("Invalid proficiency level selected.", "danger")
+            return redirect(url_for('skills.manage_user_skills'))
+
         try:
-            years_exp = max(0, int(years_of_experience))
-        except ValueError:
-            years_exp = 0
+            years_exp = int(years_of_experience)
+            if years_exp < 0:
+                raise ValueError
+        except (ValueError, TypeError):
+            flash("Years of experience must be a non-negative integer.", "danger")
+            return redirect(url_for('skills.manage_user_skills'))
+
 
         if not skill_id:
             flash("Please select a skill.", "warning")
+            return redirect(url_for('skills.manage_user_skills'))
+
+
+        try:
+            skill_id = int(skill_id)
+            if skill_id <= 0:
+                raise ValueError
+        except (ValueError, TypeError):
+            flash("Invalid skill selected.", "danger")
+            return redirect(url_for('skills.manage_user_skills'))
+
+        skill = fetch_one(
+            "SELECT id FROM skills WHERE id = %s",
+            (skill_id,)
+        )
+
+        if skill is None:
+            flash("The selected skill does not exist.", "danger")
             return redirect(url_for('skills.manage_user_skills'))
 
         # Insert or update using raw SQL
         upsert_sql = """
             INSERT INTO user_skills (user_id, skill_id, proficiency, years_of_experience)
             VALUES (%s, %s, %s, %s)
-            ON DUPLICATE KEY UPDATE 
+            ON DUPLICATE KEY UPDATE
                 proficiency = VALUES(proficiency),
                 years_of_experience = VALUES(years_of_experience)
         """

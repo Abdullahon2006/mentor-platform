@@ -16,6 +16,68 @@
         {% endif %}
     </div>
 
+<!-- Skill Search and Category Filters -->
+<div class="col-12">
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="GET"
+                  action="{{ url_for('skills.list_skills') }}"
+                  class="row g-3 align-items-end">
+
+                <div class="col-md-5">
+                    <label for="skill-search" class="form-label">
+                        Search Skills
+                    </label>
+                    <input
+                        type="text"
+                        id="skill-search"
+                        name="search"
+                        class="form-control"
+                        placeholder="e.g. Python, SQL, Flask"
+                        value="{{ search }}"
+                    >
+                </div>
+
+                <div class="col-md-4">
+                    <label for="skill-category" class="form-label">
+                        Category
+                    </label>
+                    <select
+                        id="skill-category"
+                        name="category"
+                        class="form-select"
+                    >
+                        <option value="">All Categories</option>
+
+                        {% for c in categories %}
+                        <option
+                            value="{{ c.category }}"
+                            {% if selected_category == c.category %}
+                            selected
+                            {% endif %}
+                        >
+                            {{ c.category }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+
+                    <a href="{{ url_for('skills.list_skills') }}"
+                       class="btn btn-outline-secondary">
+                        Clear
+                    </a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+
     <!-- Grouped Skills Table -->
     <div class="col-12">
         <div class="card shadow-sm">
@@ -47,6 +109,13 @@
                                 </td>
                             </tr>
                             {% endfor %}
+                                {% if not skills %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        No skills found matching your filters.
+                                    </td>
+                                </tr>
+                                {% endif %}
                         </tbody>
                     </table>
                 </div>
