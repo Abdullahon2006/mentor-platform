@@ -40,6 +40,11 @@ def _init_mysql_pool():
         _mode = 'MYSQL'
         print(f"[DATABASE] Connected to MySQL 8.0 at {Config.DB_HOST}:{Config.DB_PORT} ({Config.DB_NAME})")
     except Exception as err:
+        if os.environ.get('REQUIRE_MYSQL', '').lower() in ('1', 'true', 'yes'):
+            raise RuntimeError(
+                f"[DATABASE ERROR] REQUIRE_MYSQL is enabled, but could not connect to MySQL 8.0 "
+                f"at {Config.DB_HOST}:{Config.DB_PORT} ({err}). Please ensure MySQL is running."
+            )
         _pool = None
         _mode = 'DEMO_SQLITE'
         print(f"[DATABASE NOTICE] MySQL not running at {Config.DB_HOST}:{Config.DB_PORT} ({err}).")
