@@ -91,12 +91,26 @@ def _adapt_sql_for_sqlite(sql):
     # Replace CONCAT(a, ' ', b) with (a || ' ' || b)
     adapted = re.sub(r"CONCAT\(([^,]+),\s*([^,]+),\s*([^)]+)\)", r"(\1 || \2 || \3)", adapted)
     adapted = re.sub(r"CONCAT\(([^,]+),\s*([^)]+)\)", r"(\1 || \2)", adapted)
-    # Replace NOW() with datetime('now')
-    adapted = re.sub(r"\bNOW\(\)", "datetime('now')", adapted, flags=re.IGNORECASE)
     # Replace DATE_ADD(NOW(), INTERVAL x DAY) with datetime('now', '+x days')
     adapted = re.sub(
         r"DATE_ADD\s*\(\s*(?:NOW\(\)|CURRENT_TIMESTAMP)\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)",
         r"datetime('now', '+\1 days')",
+        adapted,
+        flags=re.IGNORECASE
+    )
+    # Replace NOW() with datetime('now') (after DATE_ADD, which matches NOW() itself)
+    adapted = re.sub(r"\bNOW\(\)", "datetime('now')", adapted, flags=re.IGNORECASE)
+    # TIME_TO_SEC(TIMEDIFF(end, start)) -> seconds between two TIME columns (float, like MySQL)
+    adapted = re.sub(
+        r"TIME_TO_SEC\(\s*TIMEDIFF\(\s*([\w.]+)\s*,\s*([\w.]+)\s*\)\s*\)",
+        r"((strftime('%s', '2000-01-01 ' || \1) - strftime('%s', '2000-01-01 ' || \2)) * 1.0)",
+        adapted,
+        flags=re.IGNORECASE
+    )
+    # TIMESTAMPDIFF(MINUTE, a, b) -> whole minutes between two DATETIME values
+    adapted = re.sub(
+        r"TIMESTAMPDIFF\(\s*MINUTE\s*,\s*([\w.]+)\s*,\s*([\w.]+)\s*\)",
+        r"CAST(ROUND((julianday(\2) - julianday(\1)) * 1440) AS INTEGER)",
         adapted,
         flags=re.IGNORECASE
     )
