@@ -111,6 +111,7 @@
                                 {% elif current_user.role == 'ADMIN' %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="{{ url_for('admin.index') }}"><i class="bi bi-shield-lock"></i> Admin Panel</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('schedule.mentor_utilization') }}"><i class="bi bi-bar-chart-line"></i> Mentor Utilization</a></li>
                                 {% endif %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ url_for('profile.edit_profile') }}"><i class="bi bi-pencil-square"></i> Edit Profile</a></li>

@@ -1,7 +1,7 @@
 from datetime import datetime, date, time, timedelta
 from flask import render_template, request, redirect, url_for, flash
 from app.blueprints.schedule import schedule_bp
-from app.db import fetch_one, fetch_all, execute_query
+from app.db import fetch_one, fetch_all, execute_query, get_db
 from app.auth_util import login_required, role_required, get_current_user
 
 DAYS_OF_WEEK = {
@@ -14,48 +14,183 @@ DAYS_OF_WEEK = {
     6: 'Sunday'
 }
 
+# CQ-04: weekly utilization of each mentor (Member 4).
+# Compares the hours a mentor publishes every week with the hours already
+# booked in the next 7 days. Two derived tables keep one row per mentor, so the
+# availability and meeting rows never multiply each other.
+# Parameters: (mentor_id, mentor_id) for one mentor, (None, None) for all mentors.
+CQ04_UTILIZATION_SQL = """
+    SELECT
+        u.id AS mentor_id,
+        CONCAT(u.first_name, ' ', u.last_name) AS mentor_name,
+        u.current_title,
+        COALESCE(avail.active_windows, 0) AS active_windows,
+        COALESCE(avail.total_available_hours_weekly, 0.0) AS weekly_available_hours,
+        COALESCE(scheduled.total_scheduled_hours, 0.0) AS upcoming_scheduled_hours,
+        CASE
+            WHEN COALESCE(avail.total_available_hours_weekly, 0.0) > COALESCE(scheduled.total_scheduled_hours, 0.0)
+            THEN COALESCE(avail.total_available_hours_weekly, 0.0) - COALESCE(scheduled.total_scheduled_hours, 0.0)
+            ELSE 0.0
+        END AS free_hours,
+        ROUND(
+            (COALESCE(scheduled.total_scheduled_hours, 0.0) / NULLIF(avail.total_available_hours_weekly, 0)) * 100,
+            1
+        ) AS utilization_rate_pct
+    FROM users u
+    LEFT JOIN (
+        SELECT
+            mentor_id,
+            COUNT(*) AS active_windows,
+            ROUND(SUM(TIME_TO_SEC(TIMEDIFF(end_time, start_time)) / 3600), 2) AS total_available_hours_weekly
+        FROM mentor_availability
+        WHERE is_active = TRUE
+        GROUP BY mentor_id
+    ) avail ON u.id = avail.mentor_id
+    LEFT JOIN (
+        SELECT
+            mr.mentor_id,
+            ROUND(SUM(TIMESTAMPDIFF(MINUTE, m.scheduled_start, m.scheduled_end) / 60.0), 2) AS total_scheduled_hours
+        FROM mentorship_relations mr
+        JOIN meetings m ON mr.id = m.relation_id
+        WHERE m.status = 'SCHEDULED'
+          AND m.scheduled_start >= NOW()
+          AND m.scheduled_start < DATE_ADD(NOW(), INTERVAL 7 DAY)
+        GROUP BY mr.mentor_id
+    ) scheduled ON u.id = scheduled.mentor_id
+    WHERE u.role = 'MENTOR'
+      AND (%s IS NULL OR u.id = %s)
+    ORDER BY utilization_rate_pct DESC, mentor_name
+"""
+
+
+@schedule_bp.route('/availability/utilization')
+@role_required('ADMIN')
+def mentor_utilization():
+    """CQ-04 for admins: every mentor's weekly utilization, busiest mentors first."""
+    mentors = fetch_all(CQ04_UTILIZATION_SQL, (None, None))
+    return render_template('schedule/utilization.html', mentors=mentors)
+
+
+def _parse_window_form(form):
+    """
+    Reads and validates the day/start/end fields of an availability form.
+    Returns (day, start_str, end_str, error). Times come back as 'HH:MM:SS'.
+    """
+    day = form.get('day_of_week', type=int)
+    if day is None or day not in DAYS_OF_WEEK:
+        return None, None, None, "Please choose a valid day of the week."
+    try:
+        start = time.fromisoformat(form.get('start_time', '').strip())
+        end = time.fromisoformat(form.get('end_time', '').strip())
+    except ValueError:
+        return None, None, None, "Please enter valid start and end times."
+    if end <= start:
+        return None, None, None, "End time must be after start time."
+    return day, start.strftime('%H:%M:%S'), end.strftime('%H:%M:%S'), None
+
+
+def _window_overlaps(mentor_id, day, start, end, ignore_id=0):
+    """True if the mentor already has a window on this day that overlaps [start, end)."""
+    row = fetch_one(
+        """
+        SELECT id FROM mentor_availability
+        WHERE mentor_id = %s AND day_of_week = %s AND id <> %s
+          AND start_time < %s AND end_time > %s
+        """,
+        (mentor_id, day, ignore_id, end, start)
+    )
+    return row is not None
+
+
 @schedule_bp.route('/availability', methods=['GET', 'POST'])
 @role_required('MENTOR')
 def manage_availability():
-    """Mentor manages weekly recurring availability blocks (Member 4 table)."""
+    """Mentor manages weekly recurring availability windows (FR-11: create + read)."""
     user = get_current_user()
     mentor_id = user['id']
 
     if request.method == 'POST':
-        day_of_week = request.form.get('day_of_week', type=int)
-        start_time = request.form.get('start_time')
-        end_time = request.form.get('end_time')
-
-        if day_of_week is None or not start_time or not end_time:
-            flash("All fields are required.", "danger")
-        elif end_time <= start_time:
-            flash("End time must be after start time.", "warning")
+        day, start, end, error = _parse_window_form(request.form)
+        if error:
+            flash(error, "danger")
+        elif _window_overlaps(mentor_id, day, start, end):
+            flash("This window overlaps with another window on the same day.", "warning")
         else:
-            insert_sql = """
+            execute_query(
+                """
                 INSERT INTO mentor_availability (mentor_id, day_of_week, start_time, end_time, is_active)
                 VALUES (%s, %s, %s, %s, TRUE)
-            """
-            execute_query(insert_sql, (mentor_id, day_of_week, start_time, end_time))
-            flash("Availability slot added successfully!", "success")
+                """,
+                (mentor_id, day, start, end)
+            )
+            flash("Availability window added.", "success")
             return redirect(url_for('schedule.manage_availability'))
 
-    # Fetch existing availability
-    avail_sql = """
+    slots = fetch_all(
+        """
         SELECT id, day_of_week, start_time, end_time, is_active
         FROM mentor_availability
         WHERE mentor_id = %s
         ORDER BY day_of_week, start_time
-    """
-    slots = fetch_all(avail_sql, (mentor_id,))
-    return render_template('schedule/availability.html', slots=slots, days=DAYS_OF_WEEK)
+        """,
+        (mentor_id,)
+    )
+    for slot in slots:  # 'HH:MM' for display and for <input type="time"> (MySQL gives timedelta)
+        slot['start_hm'] = _to_time(slot['start_time']).strftime('%H:%M')
+        slot['end_hm'] = _to_time(slot['end_time']).strftime('%H:%M')
+    usage = fetch_all(CQ04_UTILIZATION_SQL, (mentor_id, mentor_id))
+    return render_template('schedule/availability.html', slots=slots, days=DAYS_OF_WEEK,
+                           usage=usage[0] if usage else None)
+
+
+@schedule_bp.route('/availability/<int:slot_id>/edit', methods=['POST'])
+@role_required('MENTOR')
+def edit_availability(slot_id):
+    """FR-11 update: change the day or the times of one of the mentor's own windows."""
+    user = get_current_user()
+    back = redirect(url_for('schedule.manage_availability'))
+
+    slot = fetch_one("SELECT id FROM mentor_availability WHERE id = %s AND mentor_id = %s", (slot_id, user['id']))
+    if not slot:
+        flash("Availability window not found.", "danger")
+        return back
+
+    day, start, end, error = _parse_window_form(request.form)
+    if error:
+        flash(error, "danger")
+    elif _window_overlaps(user['id'], day, start, end, ignore_id=slot_id):
+        flash("This window overlaps with another window on the same day.", "warning")
+    else:
+        execute_query(
+            "UPDATE mentor_availability SET day_of_week = %s, start_time = %s, end_time = %s WHERE id = %s AND mentor_id = %s",
+            (day, start, end, slot_id, user['id'])
+        )
+        flash("Availability window updated.", "success")
+    return back
+
+
+@schedule_bp.route('/availability/<int:slot_id>/toggle', methods=['POST'])
+@role_required('MENTOR')
+def toggle_availability(slot_id):
+    """FR-11 update: switch a window on or off without deleting it."""
+    user = get_current_user()
+    _, changed = execute_query(
+        "UPDATE mentor_availability SET is_active = NOT is_active WHERE id = %s AND mentor_id = %s",
+        (slot_id, user['id'])
+    )
+    flash("Availability window updated." if changed else "Availability window not found.",
+          "success" if changed else "danger")
+    return redirect(url_for('schedule.manage_availability'))
+
 
 @schedule_bp.route('/availability/delete/<int:slot_id>', methods=['POST'])
 @role_required('MENTOR')
 def delete_availability(slot_id):
     user = get_current_user()
     execute_query("DELETE FROM mentor_availability WHERE id = %s AND mentor_id = %s", (slot_id, user['id']))
-    flash("Availability slot removed.", "info")
+    flash("Availability window removed.", "info")
     return redirect(url_for('schedule.manage_availability'))
+
 
 BOOKING_WEEKS_AHEAD = 6  # how many upcoming weeks a mentee can book into
 
@@ -210,8 +345,18 @@ def book_meeting(relation_id):
             flash("That slot is not bookable (in the past or too far ahead).", "warning")
             return back
 
+        # NFR-05: two people must not book the same mentor slot at the same time.
+        # 1) end the read transaction, so the next reads see the newest committed data
+        # 2) lock the mentor's row; a second booking for this mentor waits here
+        # 3) check for a conflict, insert the meeting and the notification, then commit
+        #    (the commit releases the lock)
+        conn = get_db()
+        conn.commit()
+        fetch_one("SELECT id FROM users WHERE id = %s FOR UPDATE", (rel['mentor_id'],))
+
         # Conflict detection: the mentor cannot have two meetings at the same time
         if _mentor_has_overlap(rel['mentor_id'], start_dt, end_dt):
+            conn.rollback()
             flash("That slot is already booked. Please pick another one.", "warning")
             return back
 
@@ -220,13 +365,15 @@ def book_meeting(relation_id):
             INSERT INTO meetings (relation_id, scheduled_start, scheduled_end, meeting_link, agenda, status)
             VALUES (%s, %s, %s, %s, %s, 'SCHEDULED')
             """,
-            (relation_id, start_dt, end_dt, meeting_link, agenda)
+            (relation_id, start_dt, end_dt, meeting_link, agenda),
+            commit=False
         )
 
         target_notify_id = rel['mentee_id'] if user_id == rel['mentor_id'] else rel['mentor_id']
         notif_msg = f"A new mentorship session has been scheduled for {start_dt.strftime('%B %d, %Y at %H:%M')}."
         execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)",
-                      (target_notify_id, "Meeting Scheduled", notif_msg))
+                      (target_notify_id, "Meeting Scheduled", notif_msg), commit=False)
+        conn.commit()
 
         flash("Meeting successfully scheduled!", "success")
         return redirect(url_for('relations.relation_detail', relation_id=relation_id))

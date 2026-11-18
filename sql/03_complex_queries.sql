@@ -199,47 +199,67 @@ ORDER BY
 -- Tables Involved: users, mentor_availability, mentorship_relations, meetings
 --
 -- Purpose:
--- Computes the scheduling load factor and availability utilization for each
--- mentor, contrasting weekly published availability hours against upcoming
--- scheduled meeting hours.
+-- Computes the scheduling load of each mentor, comparing the hours they
+-- publish every week with the hours already booked in the next 7 days.
+-- Shows weekly hours, booked hours, free hours and the utilization rate.
+-- Used by the mentor availability page (own row) and the admin
+-- "Mentor Utilization" page (all mentors).
+--
+-- Design note: availability and meetings are two one-to-many tables of a
+-- mentor. Each one is summed in its own derived table (one row per mentor)
+-- and only then joined to users, so the rows never multiply each other.
 --
 -- Relational operations demonstrated:
--- - Independent aggregated subqueries joined to the base mentor record
--- - Date/time arithmetic functions (`TIMEDIFF`, `TIME_TO_SEC`, `TIMESTAMPDIFF`)
+-- - Independent aggregated subqueries (derived tables) joined to users
+-- - Date/time arithmetic (`TIMEDIFF`, `TIME_TO_SEC`, `TIMESTAMPDIFF`, `DATE_ADD`)
 -- - Safe division using `NULLIF` to guard against zero-division errors
+-- - CASE expression to keep free hours from going below zero
 -- - Sorting by highest utilization rate to identify mentor bottlenecks
 -- =====================================================================
 
-SELECT 
+-- Use NULL for all mentors, or a mentor id for one mentor.
+SET @target_mentor_id = NULL;
+
+SELECT
     u.id AS mentor_id,
     CONCAT(u.first_name, ' ', u.last_name) AS mentor_name,
     u.current_title,
+    COALESCE(avail.active_windows, 0) AS active_windows,
     COALESCE(avail.total_available_hours_weekly, 0.0) AS weekly_available_hours,
     COALESCE(scheduled.total_scheduled_hours, 0.0) AS upcoming_scheduled_hours,
+    CASE
+        WHEN COALESCE(avail.total_available_hours_weekly, 0.0) > COALESCE(scheduled.total_scheduled_hours, 0.0)
+        THEN COALESCE(avail.total_available_hours_weekly, 0.0) - COALESCE(scheduled.total_scheduled_hours, 0.0)
+        ELSE 0.0
+    END AS free_hours,
     ROUND(
-        (COALESCE(scheduled.total_scheduled_hours, 0.0) / NULLIF(avail.total_available_hours_weekly, 0)) * 100, 
+        (COALESCE(scheduled.total_scheduled_hours, 0.0) / NULLIF(avail.total_available_hours_weekly, 0)) * 100,
         1
     ) AS utilization_rate_pct
 FROM users u
 LEFT JOIN (
-    SELECT 
+    SELECT
         mentor_id,
+        COUNT(*) AS active_windows,
         ROUND(SUM(TIME_TO_SEC(TIMEDIFF(end_time, start_time)) / 3600), 2) AS total_available_hours_weekly
     FROM mentor_availability
     WHERE is_active = TRUE
     GROUP BY mentor_id
 ) avail ON u.id = avail.mentor_id
 LEFT JOIN (
-    SELECT 
+    SELECT
         mr.mentor_id,
         ROUND(SUM(TIMESTAMPDIFF(MINUTE, m.scheduled_start, m.scheduled_end) / 60.0), 2) AS total_scheduled_hours
     FROM mentorship_relations mr
     JOIN meetings m ON mr.id = m.relation_id
     WHERE m.status = 'SCHEDULED'
+      AND m.scheduled_start >= NOW()
+      AND m.scheduled_start < DATE_ADD(NOW(), INTERVAL 7 DAY)
     GROUP BY mr.mentor_id
 ) scheduled ON u.id = scheduled.mentor_id
 WHERE u.role = 'MENTOR'
-ORDER BY utilization_rate_pct DESC;
+  AND (@target_mentor_id IS NULL OR u.id = @target_mentor_id)
+ORDER BY utilization_rate_pct DESC, mentor_name;
 
 
 -- =====================================================================
