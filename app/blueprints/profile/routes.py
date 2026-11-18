@@ -231,15 +231,19 @@ def edit_profile():
 
     return render_template('dashboard/edit_profile.html', user=user)
 
+@profile_bp.route('/notifications')
+@login_required
+def view_notifications():
+    """Direct URL for viewing notifications."""
+    return redirect(url_for('profile.dashboard') + '#notifications-section')
+
 @profile_bp.route('/notifications/<int:notif_id>/read', methods=['POST'])
-
-
 @login_required
 def mark_notification_read(notif_id):
     user = get_current_user()
     update_sql = "UPDATE notifications SET is_read = TRUE WHERE id = %s AND user_id = %s"
     execute_query(update_sql, (notif_id, user['id']))
-    return redirect(url_for('profile.dashboard'))
+    return redirect(request.referrer or url_for('profile.dashboard'))
 
 
 @profile_bp.route('/notifications/read-all', methods=['POST'])
@@ -263,5 +267,5 @@ def mark_all_notifications_read():
     else:
         flash("You have no unread notifications.", "info")
 
-    return redirect(url_for('profile.dashboard'))
+    return redirect(request.referrer or url_for('profile.dashboard'))
 

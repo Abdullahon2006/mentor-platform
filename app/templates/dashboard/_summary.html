@@ -2,17 +2,19 @@
 <div class="col-12">
   <div class="row g-3">
     <div class="col-sm-6 col-xl-3">
-      <div class="card h-100 border-primary shadow-sm">
-        <div class="card-body">
-          <div class="text-muted small">
-            <i class="bi bi-bell"></i>
-            Unread Notifications
-          </div>
-          <div class="fs-3 fw-bold text-primary">
-            {{ dashboard_summary.unread_notifications_count }}
+      <a href="#notifications-section" class="text-decoration-none">
+        <div class="card h-100 border-primary shadow-sm">
+          <div class="card-body">
+            <div class="text-muted small">
+              <i class="bi bi-bell"></i>
+              Unread Notifications
+            </div>
+            <div class="fs-3 fw-bold text-primary">
+              {{ dashboard_summary.unread_notifications_count }}
+            </div>
           </div>
         </div>
-      </div>
+      </a>
     </div>
 
     <div class="col-sm-6 col-xl-3">
