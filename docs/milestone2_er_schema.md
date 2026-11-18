@@ -718,14 +718,4 @@ In accordance with course guidelines:
 
 ## 9. Cross-Module Follow-up Tasks
 
-While finishing the relationship and availability module (Gaffar), these points were found in other members' code. They are not changed by Gaffar and are left to the owners.
-
-| Owner | File | Task | Why |
-| :--- | :--- | :--- | :--- |
-| **Abdullokhon Valikhonov** | `app/blueprints/applications/routes.py` (`decide_application`) | Before accepting, count the mentor's `ACTIVE` relations. If it is 5 or more, refuse the accept with a message. Use `MENTOR_CAPACITY` from `app/blueprints/relations/routes.py`. | CQ-02 hides mentors with 5 active mentees, but a pending application can still be accepted today. Relation resume (`update_relation_status`) already checks this limit. |
-| **Abdullokhon Valikhonov** | `app/blueprints/applications/routes.py` (`decide_application`) | Make accept atomic: the application `UPDATE`, the `mentorship_relations` `INSERT` and the notification should be one transaction. Call `execute_query(..., commit=False)` for each statement, then `get_db().commit()` once (example: `update_relation_status`). | Today each statement commits alone. If the `INSERT` fails, the application stays `ACCEPTED` without a relation. Section 5 also says "inside ACID transaction". |
-| **Raimbek Erik** | `app/blueprints/schedule/routes.py` (`book_meeting`) | Read the new lock in `book_meeting` (NFR-05). Any new route that creates or moves a meeting (for example reschedule) must use the same steps: `commit()`, `SELECT ... FOR UPDATE` on the mentor row, overlap check, write, `commit()`. | Without the lock two requests can book the same mentor slot. |
-| **Raimbek Erik** | `tests/test_meetings.py` | Optional: add a test that two bookings for the same slot create only one meeting. | Keeps the NFR-05 fix from being removed by mistake. |
-| **Ravan Seyfullayev** | `app/templates/dashboard/mentor_dashboard.html` | Optional: show the mentor's utilization on the dashboard. `CQ04_UTILIZATION_SQL` takes `(mentor_id, mentor_id)` and returns one row. | Gives mentors a quick view of how full their week is. |
-
-No follow-up tasks were found for Denils Mahmuti.
+Tasks found in other members' files while finishing the relations and availability module are listed in [team_followup_tasks.md](team_followup_tasks.md).
