@@ -1,4 +1,56 @@
-{% extends "base.html" %}
+                            {% for s in slots %}
+                            <tr>
+                                <td class="fw-bold text-dark">{{ days[s.day_of_week] }}</td>
+                                <td>{{ s.start_time }} – {{ s.end_time }}</td>
+                                <td>
+                                    {% if s.is_active %}
+                                    <span class="badge bg-success-subtle text-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-1">
+                                        <form method="POST" action="{{ url_for('schedule.toggle_availability', slot_id=s.id) }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                {% if s.is_active %}Turn off{% else %}Turn on{% endif %}
+                                            </button>
+                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#editSlot{{ s.id }}">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteSlotModal{{ s.id }}">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="collapse" id="editSlot{{ s.id }}">
+                                <td colspan="4" class="bg-light">
+                                    <form method="POST" action="{{ url_for('schedule.edit_availability', slot_id=s.id) }}" class="row g-2 align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-semibold">Day</label>
+                                            <select class="form-select form-select-sm" name="day_of_week" required>
+                                                {% for day_val, day_name in days.items() %}
+                                                <option value="{{ day_val }}" {% if day_val == s.day_of_week %}selected{% endif %}>{{ day_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-semibold">Start</label>
+                                            <input type="time" class="form-control form-control-sm" name="start_time" required value="{{ s.start_time|string|truncate(5, True, '') }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-semibold">End</label>
+                                            <input type="time" class="form-control form-control-sm" name="end_time" required value="{{ s.end_time|string|truncate(5, True, '') }}">
+                                        </div>
+                                        <div class="col-md-2 d-grid">
+                                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                        </div>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}{% extends "base.html" %}
 
 {% block title %}Manage Weekly Availability — MentorMatch{% endblock %}
 
@@ -8,6 +60,34 @@
         <h2 class="fw-bold mb-1"><i class="bi bi-clock-history text-success"></i> Weekly Availability Schedule</h2>
         <p class="text-muted mb-0">Configure recurring weekly time slots during which mentees can book 1-on-1 sessions.</p>
     </div>
+
+    {% if usage %}
+    <!-- CQ-04: this mentor's weekly utilization -->
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="row text-center g-3">
+                    <div class="col-6 col-md-3">
+                        <div class="text-muted small">Weekly available</div>
+                        <div class="fs-4 fw-bold">{{ usage.weekly_available_hours }} h</div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-muted small">Booked (next 7 days)</div>
+                        <div class="fs-4 fw-bold">{{ usage.upcoming_scheduled_hours }} h</div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-muted small">Still free</div>
+                        <div class="fs-4 fw-bold text-success">{{ usage.free_hours }} h</div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="text-muted small">Utilization</div>
+                        <div class="fs-4 fw-bold">{% if usage.utilization_rate_pct is not none %}{{ usage.utilization_rate_pct }}%{% else %}&ndash;{% endif %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Form: Add Availability Window -->
     <div class="col-md-5">
@@ -49,7 +129,7 @@
     <div class="col-md-7">
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white py-3">
-                <h5 class="fw-bold mb-0">Active Weekly Windows ({{ slots|length }})</h5>
+                <h5 class="fw-bold mb-0">Weekly Windows ({{ slots|length }})</h5>
             </div>
             <div class="card-body p-0">
                 {% if slots %}
@@ -81,6 +161,22 @@
                         </tbody>
                     </table>
                 </div>
+                {% for s in slots %}
+                <!-- Delete confirmation -->
+                            <div class="modal fade" id="deleteSlotModal{{ s.id }}" tabindex="-1">
+                                <div class="modal-dialog modal-sm">
+                                    <div class="modal-content">
+                                        <div class="modal-body small">Delete this availability window?</div>
+                                        <div class="modal-footer py-2">
+                                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Keep</button>
+                                            <form method="POST" action="{{ url_for('schedule.delete_availability', slot_id=s.id) }}">
+                                                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                {% endfor %}
                 {% else %}
                 <div class="text-center p-4 text-muted">
                     No availability blocks defined. Mentees will not see any open slots until you add recurring windows.
