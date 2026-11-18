@@ -53,7 +53,7 @@ CREATE TABLE notifications (
     message TEXT NOT NULL,
     is_read BOOLEAN NOT NULL DEFAULT FALSE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) 
+    CONSTRAINT fk_notifications_user FOREIGN KEY (user_id)
         REFERENCES users (id) ON DELETE CASCADE,
     INDEX idx_notifications_user_read (user_id, is_read)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -80,9 +80,9 @@ CREATE TABLE user_skills (
     skill_id INT NOT NULL,
     proficiency ENUM('BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT') NOT NULL,
     years_of_experience INT NOT NULL DEFAULT 0,
-    CONSTRAINT fk_user_skills_user FOREIGN KEY (user_id) 
+    CONSTRAINT fk_user_skills_user FOREIGN KEY (user_id)
         REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT fk_user_skills_skill FOREIGN KEY (skill_id) 
+    CONSTRAINT fk_user_skills_skill FOREIGN KEY (skill_id)
         REFERENCES skills (id) ON DELETE CASCADE,
     CONSTRAINT uq_user_skill UNIQUE (user_id, skill_id),
     CONSTRAINT chk_years_exp CHECK (years_of_experience >= 0)
@@ -100,7 +100,7 @@ CREATE TABLE mentorship_goals (
     target_completion_date DATE,
     status ENUM('ACTIVE', 'ACHIEVED', 'ABANDONED') NOT NULL DEFAULT 'ACTIVE',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_goals_mentee FOREIGN KEY (mentee_id) 
+    CONSTRAINT fk_goals_mentee FOREIGN KEY (mentee_id)
         REFERENCES users (id) ON DELETE CASCADE,
     INDEX idx_goals_mentee_status (mentee_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -118,11 +118,11 @@ CREATE TABLE mentorship_applications (
     status ENUM('PENDING', 'ACCEPTED', 'REJECTED', 'WITHDRAWN') NOT NULL DEFAULT 'PENDING',
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     decided_at DATETIME NULL,
-    CONSTRAINT fk_apps_mentee FOREIGN KEY (mentee_id) 
+    CONSTRAINT fk_apps_mentee FOREIGN KEY (mentee_id)
         REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT fk_apps_mentor FOREIGN KEY (mentor_id) 
+    CONSTRAINT fk_apps_mentor FOREIGN KEY (mentor_id)
         REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT fk_apps_goal FOREIGN KEY (goal_id) 
+    CONSTRAINT fk_apps_goal FOREIGN KEY (goal_id)
         REFERENCES mentorship_goals (id) ON DELETE SET NULL,
     INDEX idx_apps_mentor_status (mentor_id, status),
     INDEX idx_apps_mentee_status (mentee_id, status)
@@ -141,11 +141,11 @@ CREATE TABLE mentorship_relations (
     end_date DATE NULL,
     status ENUM('ACTIVE', 'PAUSED', 'COMPLETED', 'TERMINATED') NOT NULL DEFAULT 'ACTIVE',
     notes TEXT,
-    CONSTRAINT fk_relations_app FOREIGN KEY (application_id) 
+    CONSTRAINT fk_relations_app FOREIGN KEY (application_id)
         REFERENCES mentorship_applications (id) ON DELETE RESTRICT,
-    CONSTRAINT fk_relations_mentee FOREIGN KEY (mentee_id) 
+    CONSTRAINT fk_relations_mentee FOREIGN KEY (mentee_id)
         REFERENCES users (id) ON DELETE RESTRICT,
-    CONSTRAINT fk_relations_mentor FOREIGN KEY (mentor_id) 
+    CONSTRAINT fk_relations_mentor FOREIGN KEY (mentor_id)
         REFERENCES users (id) ON DELETE RESTRICT,
     INDEX idx_relations_mentor_status (mentor_id, status),
     INDEX idx_relations_mentee_status (mentee_id, status)
@@ -162,7 +162,7 @@ CREATE TABLE mentor_availability (
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    CONSTRAINT fk_availability_mentor FOREIGN KEY (mentor_id) 
+    CONSTRAINT fk_availability_mentor FOREIGN KEY (mentor_id)
         REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT chk_day_of_week CHECK (day_of_week BETWEEN 0 AND 6),
     CONSTRAINT chk_time_window CHECK (end_time > start_time),
@@ -182,7 +182,7 @@ CREATE TABLE meetings (
     agenda TEXT,
     status ENUM('SCHEDULED', 'COMPLETED', 'CANCELLED', 'NO_SHOW') NOT NULL DEFAULT 'SCHEDULED',
     cancellation_reason VARCHAR(255),
-    CONSTRAINT fk_meetings_relation FOREIGN KEY (relation_id) 
+    CONSTRAINT fk_meetings_relation FOREIGN KEY (relation_id)
         REFERENCES mentorship_relations (id) ON DELETE CASCADE,
     CONSTRAINT chk_meeting_times CHECK (scheduled_end > scheduled_start),
     INDEX idx_meetings_relation_status (relation_id, status),
@@ -201,11 +201,11 @@ CREATE TABLE reviews_and_ratings (
     rating TINYINT NOT NULL,
     review_text TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_reviews_relation FOREIGN KEY (relation_id) 
+    CONSTRAINT fk_reviews_relation FOREIGN KEY (relation_id)
         REFERENCES mentorship_relations (id) ON DELETE CASCADE,
-    CONSTRAINT fk_reviews_reviewer FOREIGN KEY (reviewer_id) 
+    CONSTRAINT fk_reviews_reviewer FOREIGN KEY (reviewer_id)
         REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT fk_reviews_reviewee FOREIGN KEY (reviewee_id) 
+    CONSTRAINT fk_reviews_reviewee FOREIGN KEY (reviewee_id)
         REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT chk_rating_range CHECK (rating BETWEEN 1 AND 5),
     CONSTRAINT uq_review_per_party UNIQUE (relation_id, reviewer_id, reviewee_id),
@@ -223,9 +223,9 @@ CREATE TABLE meeting_notes (
     summary TEXT NOT NULL,
     action_items TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_notes_meeting FOREIGN KEY (meeting_id) 
+    CONSTRAINT fk_notes_meeting FOREIGN KEY (meeting_id)
         REFERENCES meetings (id) ON DELETE CASCADE,
-    CONSTRAINT fk_notes_author FOREIGN KEY (author_id) 
+    CONSTRAINT fk_notes_author FOREIGN KEY (author_id)
         REFERENCES users (id) ON DELETE CASCADE,
     INDEX idx_notes_meeting (meeting_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -21,7 +21,7 @@ def get_current_user():
         if user_id:
             raw_sql = """
                 SELECT id, email, first_name, last_name, role, bio, current_title, organization, created_at
-                FROM users 
+                FROM users
                 WHERE id = %s
             """
             g.current_user = fetch_one(raw_sql, (user_id,))
