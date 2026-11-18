@@ -38,7 +38,7 @@ The data requirements directly fulfill the functional requirements (FR-01 throug
 | **FR-08** | Mentorship Application Submission | `mentorship_applications`, `mentorship_goals` | `mentee_id`, `mentor_id`, optional `goal_id`, motivational `message`, `status` (`PENDING`, `ACCEPTED`, `REJECTED`, `WITHDRAWN`). | Abdullokhon Valikhonov |
 | **FR-09** | Application Decision & Review | `mentorship_applications` | Status transition timestamp `decided_at`, mentor verification, atomic status update. | Abdullokhon Valikhonov |
 | **FR-10** | Mentorship Relationship Lifecycle | `mentorship_relations` | Formalization of accepted application: `start_date`, `end_date`, `status` (`ACTIVE`, `PAUSED`, `COMPLETED`, `TERMINATED`), supervision `notes`. | Gaffar Dulkadir |
-| **FR-11** | Mentor Availability Windows | `mentor_availability` | `mentor_id`, `day_of_week` (0=Sunday to 6=Saturday), `start_time`, `end_time` (`end_time > start_time`), `is_active`. | Gaffar Dulkadir |
+| **FR-11** | Mentor Availability Windows | `mentor_availability` | `mentor_id`, `day_of_week` (0=Monday to 6=Sunday), `start_time`, `end_time` (`end_time > start_time`), `is_active`. Windows of one mentor on the same day must not overlap (checked in the application). | Gaffar Dulkadir |
 | **FR-12** | Meeting Scheduling | `meetings`, `mentorship_relations` | `relation_id`, `scheduled_start`, `scheduled_end` (`scheduled_end > scheduled_start`), `meeting_link`, `agenda`, `status` (`SCHEDULED`). | Raimbek Erik |
 | **FR-13** | Meeting Status & Cancellation | `meetings` | Status transitions (`COMPLETED`, `CANCELLED`, `NO_SHOW`), mandatory `cancellation_reason` on cancellation. | Raimbek Erik |
 | **FR-14** | Session Notes & Action Items | `meeting_notes`, `meetings` | `meeting_id`, `author_id` (participant), discussion `summary`, markdown `action_items`. | Raimbek Erik |
@@ -364,14 +364,14 @@ Each entity and relationship is mapped to a relational schema with exact MySQL d
       end_date DATE NULL,
       status ENUM('ACTIVE', 'PAUSED', 'COMPLETED', 'TERMINATED') NOT NULL DEFAULT 'ACTIVE',
       notes TEXT,
-      CONSTRAINT fk_rel_application FOREIGN KEY (application_id) 
+      CONSTRAINT fk_relations_app FOREIGN KEY (application_id)
           REFERENCES mentorship_applications (id) ON DELETE RESTRICT,
-      CONSTRAINT fk_rel_mentee FOREIGN KEY (mentee_id) 
+      CONSTRAINT fk_relations_mentee FOREIGN KEY (mentee_id)
           REFERENCES users (id) ON DELETE RESTRICT,
-      CONSTRAINT fk_rel_mentor FOREIGN KEY (mentor_id) 
+      CONSTRAINT fk_relations_mentor FOREIGN KEY (mentor_id)
           REFERENCES users (id) ON DELETE RESTRICT,
-      INDEX idx_rel_mentor_status (mentor_id, status),
-      INDEX idx_rel_mentee_status (mentee_id, status)
+      INDEX idx_relations_mentor_status (mentor_id, status),
+      INDEX idx_relations_mentee_status (mentee_id, status)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   ```
 - **Primary Key**: `id`
@@ -385,15 +385,15 @@ Each entity and relationship is mapped to a relational schema with exact MySQL d
   CREATE TABLE mentor_availability (
       id INT AUTO_INCREMENT PRIMARY KEY,
       mentor_id INT NOT NULL,
-      day_of_week TINYINT NOT NULL,
+      day_of_week TINYINT NOT NULL COMMENT '0=Monday ... 6=Sunday',
       start_time TIME NOT NULL,
       end_time TIME NOT NULL,
       is_active BOOLEAN NOT NULL DEFAULT TRUE,
-      CONSTRAINT fk_avail_mentor FOREIGN KEY (mentor_id) 
+      CONSTRAINT fk_availability_mentor FOREIGN KEY (mentor_id)
           REFERENCES users (id) ON DELETE CASCADE,
       CONSTRAINT chk_day_of_week CHECK (day_of_week BETWEEN 0 AND 6),
-      CONSTRAINT chk_avail_times CHECK (end_time > start_time),
-      INDEX idx_avail_mentor_day (mentor_id, day_of_week, is_active)
+      CONSTRAINT chk_time_window CHECK (end_time > start_time),
+      INDEX idx_availability_mentor (mentor_id, day_of_week, is_active)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
   ```
 - **Primary Key**: `id`
@@ -622,14 +622,14 @@ The application provides web-based UI forms and views for full CRUD operations a
 | | **R** | `GET /applications` | `SELECT ma.id, ma.status, ma.message, ma.created_at, u.first_name, u.last_name, mg.title AS goal_title FROM mentorship_applications ma JOIN users u ON ma.mentor_id = u.id LEFT JOIN mentorship_goals mg ON ma.goal_id = mg.id WHERE ma.mentee_id = %s` | Applicant or recipient ID |
 | | **U** | `POST /applications/<id>/decision` | `UPDATE mentorship_applications SET status=%s, decided_at=NOW() WHERE id=%s AND mentor_id=%s` | Decision (`ACCEPTED` / `REJECTED`) |
 | | **D** | `POST /applications/<id>/withdraw` | `UPDATE mentorship_applications SET status='WITHDRAWN' WHERE id=%s AND mentee_id=%s AND status='PENDING'` | Application ID, mentee ID |
-| **`mentorship_relations`** | **C** | Triggered on application accept | `INSERT INTO mentorship_relations (application_id, mentee_id, mentor_id, start_date, status) VALUES (%s, %s, %s, CURRENT_DATE, 'ACTIVE')` | Application data inside ACID transaction |
-| | **R** | `GET /relations`, `GET /relations/<id>` | `SELECT mr.*, mtr.first_name AS mentor_name, mte.first_name AS mentee_name FROM mentorship_relations mr JOIN users mtr ON mr.mentor_id = mtr.id JOIN users mte ON mr.mentee_id = mte.id WHERE mr.id = %s` | Relation ID, participant check |
-| | **U** | `POST /relations/<id>/status` | `UPDATE mentorship_relations SET status=%s, end_date=%s, notes=%s WHERE id=%s` | Updated lifecycle status (`COMPLETED`, `PAUSED`, etc.) |
-| | **D** | Admin intervention | `DELETE FROM mentorship_relations WHERE id=%s` | Restricted foreign keys prevent orphaned records |
-| **`mentor_availability`** | **C** | `POST /availability/new` | `INSERT INTO mentor_availability (mentor_id, day_of_week, start_time, end_time, is_active) VALUES (%s, %s, %s, %s, TRUE)` | Day of week, start, end times |
+| **`mentorship_relations`** | **C** | Triggered on application accept (`POST /applications/<id>/decide`) | `INSERT INTO mentorship_relations (application_id, mentee_id, mentor_id, start_date, status) VALUES (%s, %s, %s, CURRENT_DATE, 'ACTIVE')` | Application data inside ACID transaction (see section 9) |
+| | **R** | `GET /relations/`, `GET /relations/<id>` | `SELECT mr.*, mentor.first_name, mentee.first_name, mg.title FROM mentorship_relations mr JOIN users mentor ON mr.mentor_id = mentor.id JOIN users mentee ON mr.mentee_id = mentee.id JOIN mentorship_applications ma ON mr.application_id = ma.id LEFT JOIN mentorship_goals mg ON ma.goal_id = mg.id WHERE mr.id = %s` | Relation ID, participant check |
+| | **U** | `POST /relations/<id>/status` | `UPDATE mentorship_relations SET status=%s, end_date=COALESCE(%s, end_date), notes=COALESCE(NULLIF(%s, ''), notes) WHERE id=%s AND status=%s` | New status (`PAUSED`, `ACTIVE`, `COMPLETED`, `TERMINATED`), optional note. Allowed moves: `ACTIVE` to `PAUSED`/`COMPLETED`/`TERMINATED`, `PAUSED` to `ACTIVE`/`COMPLETED`/`TERMINATED`; `COMPLETED` and `TERMINATED` are final. Upcoming `SCHEDULED` meetings are cancelled and the other participant is notified, all in one transaction. Resume is refused when the mentor already has 5 `ACTIVE` mentees. |
+| | **D** | `POST /relations/<id>/delete` (admin only) | `DELETE FROM mentorship_relations WHERE id=%s` | Meetings, notes and reviews are removed by `ON DELETE CASCADE`; the accepted application is set to `WITHDRAWN` in the same transaction so the mentee can apply again |
+| **`mentor_availability`** | **C** | `POST /availability` | `INSERT INTO mentor_availability (mentor_id, day_of_week, start_time, end_time, is_active) VALUES (%s, %s, %s, %s, TRUE)` | Day of week, start, end times. Rejected if the day is not 0-6, `end_time <= start_time`, or the window overlaps another window of the same mentor |
 | | **R** | `GET /availability` | `SELECT id, day_of_week, start_time, end_time, is_active FROM mentor_availability WHERE mentor_id = %s ORDER BY day_of_week, start_time` | Mentor user ID |
-| | **U** | `POST /availability/<id>/toggle` | `UPDATE mentor_availability SET is_active = NOT is_active WHERE id = %s AND mentor_id = %s` | Slot ID, mentor ID |
-| | **D** | `POST /availability/<id>/delete` | `DELETE FROM mentor_availability WHERE id = %s AND mentor_id = %s` | Slot ID, mentor ID |
+| | **U** | `POST /availability/<id>/edit`, `POST /availability/<id>/toggle` | `UPDATE mentor_availability SET day_of_week=%s, start_time=%s, end_time=%s WHERE id=%s AND mentor_id=%s`; `UPDATE mentor_availability SET is_active = NOT is_active WHERE id=%s AND mentor_id=%s` | Slot ID, mentor ID (same validation as create) |
+| | **D** | `POST /availability/delete/<id>` | `DELETE FROM mentor_availability WHERE id = %s AND mentor_id = %s` | Slot ID, mentor ID |
 | **`meetings`** | **C** | `POST /meetings/book` | `INSERT INTO meetings (relation_id, scheduled_start, scheduled_end, meeting_link, agenda, status) VALUES (%s, %s, %s, %s, %s, 'SCHEDULED')` | Booking form, relationship ID |
 | | **R** | `GET /meetings` | `SELECT m.*, u.first_name, u.last_name FROM meetings m JOIN mentorship_relations mr ON m.relation_id = mr.id JOIN users u ON ... WHERE mr.mentee_id = %s OR mr.mentor_id = %s` | User ID, date range filter |
 | | **U** | `POST /meetings/<id>/complete` | `UPDATE meetings SET status='COMPLETED' WHERE id=%s` | Meeting ID |
@@ -666,8 +666,9 @@ The system implements 5 specialized complex queries demonstrating advanced SQL o
 ### CQ-04: Mentor Weekly Utilization & Availability Analysis
 - **Responsible Member**: **Gaffar Dulkadir** (150210306)
 - **Tables Involved**: `users`, `mentor_availability`, `mentorship_relations`, `meetings`
-- **Purpose**: Evaluates mentor scheduling utilization by comparing published weekly availability hours against booked meeting hours scheduled for the upcoming period.
-- **Relational Operations**: Independent aggregated subqueries joined on mentor ID, date/time arithmetic (`TIMEDIFF`, `TIME_TO_SEC`, `TIMESTAMPDIFF`), and safe division using `NULLIF` to guard against zero-division errors.
+- **Purpose**: Compares the hours a mentor publishes every week (active windows) with the hours already booked in the next 7 days. Returns weekly hours, booked hours, free hours and the utilization rate for each mentor. A mentor sees their own row on the Availability page; an admin sees all mentors on `GET /availability/utilization`, busiest mentors first.
+- **Relational Operations**: Two independent derived tables (one row per mentor, so availability and meetings never multiply each other) joined to `users`, date/time arithmetic (`TIMEDIFF`, `TIME_TO_SEC`, `TIMESTAMPDIFF`, `DATE_ADD`), `CASE` to keep free hours at 0 or more, and safe division using `NULLIF` to guard against zero-division errors.
+- **Query**: `sql/03_complex_queries.sql` (and `CQ04_UTILIZATION_SQL` in `app/blueprints/schedule/routes.py`).
 
 ### CQ-05: Mentor Leaderboard & Multi-Dimensional Analytics
 - **Responsible Member**: **Raimbek Erik** (150230932)
@@ -712,3 +713,19 @@ In accordance with course guidelines:
 2. **Individual Contributions**: Each team member is responsible for committing code for their assigned tables, CRUD routes, and complex queries using their individual GitHub accounts.
 3. **Branching Strategy**: Milestone 2 and Milestone 3 features are developed on dedicated feature branches (`feature/milestone2`) and peer-reviewed before merging into `main`.
 4. **No ORM / Pure SQL**: Every database interaction uses parameterized raw SQL queries via MySQL cursor (`mysql-connector-python`), strictly adhering to course policy.
+
+---
+
+## 9. Cross-Module Follow-up Tasks
+
+While finishing the relationship and availability module (Gaffar), these points were found in other members' code. They are not changed by Gaffar and are left to the owners.
+
+| Owner | File | Task | Why |
+| :--- | :--- | :--- | :--- |
+| **Abdullokhon Valikhonov** | `app/blueprints/applications/routes.py` (`decide_application`) | Before accepting, count the mentor's `ACTIVE` relations. If it is 5 or more, refuse the accept with a message. Use `MENTOR_CAPACITY` from `app/blueprints/relations/routes.py`. | CQ-02 hides mentors with 5 active mentees, but a pending application can still be accepted today. Relation resume (`update_relation_status`) already checks this limit. |
+| **Abdullokhon Valikhonov** | `app/blueprints/applications/routes.py` (`decide_application`) | Make accept atomic: the application `UPDATE`, the `mentorship_relations` `INSERT` and the notification should be one transaction. Call `execute_query(..., commit=False)` for each statement, then `get_db().commit()` once (example: `update_relation_status`). | Today each statement commits alone. If the `INSERT` fails, the application stays `ACCEPTED` without a relation. Section 5 also says "inside ACID transaction". |
+| **Raimbek Erik** | `app/blueprints/schedule/routes.py` (`book_meeting`) | Read the new lock in `book_meeting` (NFR-05). Any new route that creates or moves a meeting (for example reschedule) must use the same steps: `commit()`, `SELECT ... FOR UPDATE` on the mentor row, overlap check, write, `commit()`. | Without the lock two requests can book the same mentor slot. |
+| **Raimbek Erik** | `tests/test_meetings.py` | Optional: add a test that two bookings for the same slot create only one meeting. | Keeps the NFR-05 fix from being removed by mistake. |
+| **Ravan Seyfullayev** | `app/templates/dashboard/mentor_dashboard.html` | Optional: show the mentor's utilization on the dashboard. `CQ04_UTILIZATION_SQL` takes `(mentor_id, mentor_id)` and returns one row. | Gives mentors a quick view of how full their week is. |
+
+No follow-up tasks were found for Denils Mahmuti.
