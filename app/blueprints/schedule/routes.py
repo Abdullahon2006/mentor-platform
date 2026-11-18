@@ -135,6 +135,9 @@ def manage_availability():
         """,
         (mentor_id,)
     )
+    for slot in slots:  # 'HH:MM' for display and for <input type="time"> (MySQL gives timedelta)
+        slot['start_hm'] = _to_time(slot['start_time']).strftime('%H:%M')
+        slot['end_hm'] = _to_time(slot['end_time']).strftime('%H:%M')
     usage = fetch_all(CQ04_UTILIZATION_SQL, (mentor_id, mentor_id))
     return render_template('schedule/availability.html', slots=slots, days=DAYS_OF_WEEK,
                            usage=usage[0] if usage else None)

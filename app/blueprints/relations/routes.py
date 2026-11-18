@@ -238,6 +238,13 @@ def delete_relation(relation_id):
         flash("Mentorship relationship not found.", "warning")
         return redirect(url_for('relations.list_relations'))
 
+    # Children are deleted explicitly (FK CASCADE does the same on MySQL, but the SQLite demo DB does not enforce it)
+    execute_query(
+        "DELETE FROM meeting_notes WHERE meeting_id IN (SELECT id FROM meetings WHERE relation_id = %s)",
+        (relation_id,), commit=False
+    )
+    execute_query("DELETE FROM meetings WHERE relation_id = %s", (relation_id,), commit=False)
+    execute_query("DELETE FROM reviews_and_ratings WHERE relation_id = %s", (relation_id,), commit=False)
     execute_query("DELETE FROM mentorship_relations WHERE id = %s", (relation_id,), commit=False)
     execute_query(
         "UPDATE mentorship_applications SET status = 'WITHDRAWN' WHERE id = %s AND status = 'ACCEPTED'",
