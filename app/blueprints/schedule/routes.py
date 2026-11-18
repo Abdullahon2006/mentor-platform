@@ -1,7 +1,7 @@
 from datetime import datetime, date, time, timedelta
 from flask import render_template, request, redirect, url_for, flash
 from app.blueprints.schedule import schedule_bp
-from app.db import fetch_one, fetch_all, execute_query
+from app.db import fetch_one, fetch_all, execute_query, get_db
 from app.auth_util import login_required, role_required, get_current_user
 
 DAYS_OF_WEEK = {
@@ -342,8 +342,18 @@ def book_meeting(relation_id):
             flash("That slot is not bookable (in the past or too far ahead).", "warning")
             return back
 
+        # NFR-05: two people must not book the same mentor slot at the same time.
+        # 1) end the read transaction, so the next reads see the newest committed data
+        # 2) lock the mentor's row; a second booking for this mentor waits here
+        # 3) check for a conflict, insert the meeting and the notification, then commit
+        #    (the commit releases the lock)
+        conn = get_db()
+        conn.commit()
+        fetch_one("SELECT id FROM users WHERE id = %s FOR UPDATE", (rel['mentor_id'],))
+
         # Conflict detection: the mentor cannot have two meetings at the same time
         if _mentor_has_overlap(rel['mentor_id'], start_dt, end_dt):
+            conn.rollback()
             flash("That slot is already booked. Please pick another one.", "warning")
             return back
 
@@ -352,13 +362,15 @@ def book_meeting(relation_id):
             INSERT INTO meetings (relation_id, scheduled_start, scheduled_end, meeting_link, agenda, status)
             VALUES (%s, %s, %s, %s, %s, 'SCHEDULED')
             """,
-            (relation_id, start_dt, end_dt, meeting_link, agenda)
+            (relation_id, start_dt, end_dt, meeting_link, agenda),
+            commit=False
         )
 
         target_notify_id = rel['mentee_id'] if user_id == rel['mentor_id'] else rel['mentor_id']
         notif_msg = f"A new mentorship session has been scheduled for {start_dt.strftime('%B %d, %Y at %H:%M')}."
         execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)",
-                      (target_notify_id, "Meeting Scheduled", notif_msg))
+                      (target_notify_id, "Meeting Scheduled", notif_msg), commit=False)
+        conn.commit()
 
         flash("Meeting successfully scheduled!", "success")
         return redirect(url_for('relations.relation_detail', relation_id=relation_id))
