@@ -135,6 +135,8 @@ def _adapt_sql_for_sqlite(sql):
                 "ON CONFLICT(relation_id, reviewer_id, reviewee_id) DO UPDATE SET rating=excluded.rating, review_text=excluded.review_text",
                 adapted, flags=re.IGNORECASE
             )
+    # Strip FOR UPDATE (SQLite does not support row-level locks)
+    adapted = re.sub(r"\s+FOR\s+UPDATE\b", "", adapted, flags=re.IGNORECASE)
     return adapted
 
 def execute_query(sql, params=None, commit=True):
