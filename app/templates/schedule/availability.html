@@ -1,56 +1,4 @@
-                            {% for s in slots %}
-                            <tr>
-                                <td class="fw-bold text-dark">{{ days[s.day_of_week] }}</td>
-                                <td>{{ s.start_hm }} – {{ s.end_hm }}</td>
-                                <td>
-                                    {% if s.is_active %}
-                                    <span class="badge bg-success-subtle text-success">Active</span>
-                                    {% else %}
-                                    <span class="badge bg-secondary-subtle text-secondary">Inactive</span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-end">
-                                    <div class="d-inline-flex gap-1">
-                                        <form method="POST" action="{{ url_for('schedule.toggle_availability', slot_id=s.id) }}">
-                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
-                                                {% if s.is_active %}Turn off{% else %}Turn on{% endif %}
-                                            </button>
-                                        </form>
-                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#editSlot{{ s.id }}">
-                                            <i class="bi bi-pencil"></i>
-                                        </button>
-                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteSlotModal{{ s.id }}">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr class="collapse" id="editSlot{{ s.id }}">
-                                <td colspan="4" class="bg-light">
-                                    <form method="POST" action="{{ url_for('schedule.edit_availability', slot_id=s.id) }}" class="row g-2 align-items-end">
-                                        <div class="col-md-4">
-                                            <label class="form-label small fw-semibold">Day</label>
-                                            <select class="form-select form-select-sm" name="day_of_week" required>
-                                                {% for day_val, day_name in days.items() %}
-                                                <option value="{{ day_val }}" {% if day_val == s.day_of_week %}selected{% endif %}>{{ day_name }}</option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-semibold">Start</label>
-                                            <input type="time" class="form-control form-control-sm" name="start_time" required value="{{ s.start_hm }}">
-                                        </div>
-                                        <div class="col-md-3">
-                                            <label class="form-label small fw-semibold">End</label>
-                                            <input type="time" class="form-control form-control-sm" name="end_time" required value="{{ s.end_hm }}">
-                                        </div>
-                                        <div class="col-md-2 d-grid">
-                                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
-                                        </div>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}{% extends "base.html" %}
+{% extends "base.html" %}
 
 {% block title %}Manage Weekly Availability — MentorMatch{% endblock %}
 
@@ -148,12 +96,51 @@
                             <tr>
                                 <td class="fw-bold text-dark">{{ days[s.day_of_week] }}</td>
                                 <td>{{ s.start_hm }} – {{ s.end_hm }}</td>
-                                <td><span class="badge bg-success-subtle text-success">Active</span></td>
+                                <td>
+                                    {% if s.is_active %}
+                                    <span class="badge bg-success-subtle text-success">Active</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
                                 <td class="text-end">
-                                    <form method="POST" action="{{ url_for('schedule.delete_availability', slot_id=s.id) }}" class="d-inline" onsubmit="return confirm('Delete this availability window?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <div class="d-inline-flex gap-1">
+                                        <form method="POST" action="{{ url_for('schedule.toggle_availability', slot_id=s.id) }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                {% if s.is_active %}Turn off{% else %}Turn on{% endif %}
+                                            </button>
+                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#editSlot{{ s.id }}">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteSlotModal{{ s.id }}">
                                             <i class="bi bi-trash"></i>
                                         </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr class="collapse" id="editSlot{{ s.id }}">
+                                <td colspan="4" class="bg-light">
+                                    <form method="POST" action="{{ url_for('schedule.edit_availability', slot_id=s.id) }}" class="row g-2 align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label small fw-semibold">Day</label>
+                                            <select class="form-select form-select-sm" name="day_of_week" required>
+                                                {% for day_val, day_name in days.items() %}
+                                                <option value="{{ day_val }}" {% if day_val == s.day_of_week %}selected{% endif %}>{{ day_name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-semibold">Start</label>
+                                            <input type="time" class="form-control form-control-sm" name="start_time" required value="{{ s.start_hm }}">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label small fw-semibold">End</label>
+                                            <input type="time" class="form-control form-control-sm" name="end_time" required value="{{ s.end_hm }}">
+                                        </div>
+                                        <div class="col-md-2 d-grid">
+                                            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+                                        </div>
                                     </form>
                                 </td>
                             </tr>

@@ -8,6 +8,7 @@ demo/MySQL database:
 - test applications/relations/meetings carry MARK in a text column,
 - test users use an e-mail that starts with 'pytest-relations-'.
 """
+import re
 from datetime import date, datetime, timedelta
 
 import pytest
@@ -230,6 +231,21 @@ def test_availability_page_is_for_mentors_only(app):
     assert login(app, MENTEE).get('/availability').status_code == 302
     assert login(app, ADMIN).get('/availability').status_code == 302
     assert login(app, MENTOR).get('/availability').status_code == 200
+
+
+def test_availability_page_puts_each_windows_buttons_in_the_table(app, ids):
+    client = login(app, MENTOR)
+    add_window(client, '10:00', '12:00')
+    html = client.get('/availability').get_data(as_text=True)
+
+    assert html.lstrip().lower().startswith('<!doctype')                  # nothing is printed before the page
+    rows = re.search(r'<tbody>(.*?)</tbody>', html, re.S).group(1)
+    with app.app_context():
+        windows = fetch_one("SELECT COUNT(*) AS cnt FROM mentor_availability WHERE mentor_id = %s", (ids['mentor'],))['cnt']
+    assert rows.count('Turn off') == windows                                # one toggle button per window
+    assert rows.count('id="editSlot') == windows                            # one edit form per window
+    assert 'modal fade' not in rows                                         # modals are not inside the table
+    assert html.count('{%') == 0 and html.count('{{') == 0                  # no unrendered template code
 
 
 # ---------------------------------------------------------------------
