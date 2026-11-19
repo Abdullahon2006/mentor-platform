@@ -90,3 +90,57 @@ def test_application_submission_and_withdrawal(client):
     assert b"Selin Kaya" in res_list.data
     assert b"PENDING" in res_list.data
     assert b"Withdraw" in res_list.data
+
+def test_mentor_decide_application_capacity_and_atomic(client):
+    from app.db import execute_query, fetch_one
+    with client.application.app_context():
+        # Ensure Mentor Selin Kaya (id=3) has an active PENDING application from Mentee Can (id=5)
+        execute_query("DELETE FROM mentorship_relations WHERE application_id IN (SELECT id FROM mentorship_applications WHERE mentor_id = 3)")
+        execute_query("DELETE FROM mentorship_applications WHERE mentor_id = 3 AND mentee_id = 5")
+        app_id, _ = execute_query(
+            "INSERT INTO mentorship_applications (mentee_id, mentor_id, message, status) VALUES (5, 3, 'Test application', 'PENDING')"
+        )
+
+    # Login as Mentor Selin Kaya (id=3)
+    client.post('/auth/login', data={
+        'email': 'selin.kaya@ailabs.org',
+        'password': 'password123'
+    }, follow_redirects=True)
+
+    # 1. Accept application normally
+    res_accept = client.post(f'/applications/{app_id}/decide', data={'decision': 'ACCEPTED'}, follow_redirects=True)
+    assert res_accept.status_code == 200
+    assert b"Application accepted! An active mentorship relationship has been established." in res_accept.data
+
+    with client.application.app_context():
+        # Verify atomic update
+        app_row = fetch_one("SELECT status FROM mentorship_applications WHERE id = %s", (app_id,))
+        assert app_row['status'] == 'ACCEPTED'
+        rel_row = fetch_one("SELECT id, status FROM mentorship_relations WHERE application_id = %s", (app_id,))
+        assert rel_row is not None
+        assert rel_row['status'] == 'ACTIVE'
+
+    # 2. Test double-click / re-acceptance guard: second accept must be rejected
+    res_double = client.post(f'/applications/{app_id}/decide', data={'decision': 'ACCEPTED'}, follow_redirects=True)
+    assert b"already been processed" in res_double.data.lower()
+
+    # 3. Test capacity check limit: insert dummy active relations to reach 5
+    with client.application.app_context():
+        for i in range(100, 104):
+            execute_query(
+                "INSERT INTO mentorship_relations (id, application_id, mentee_id, mentor_id, start_date, status) VALUES (%s, %s, 4, 3, '2026-11-01', 'ACTIVE')",
+                (i, i * 10)
+            )
+        # Add a new pending application
+        over_app_id, _ = execute_query(
+            "INSERT INTO mentorship_applications (mentee_id, mentor_id, message, status) VALUES (4, 3, 'Capacity check test', 'PENDING')"
+        )
+
+    res_over = client.post(f'/applications/{over_app_id}/decide', data={'decision': 'ACCEPTED'}, follow_redirects=True)
+    assert b"You already have 5 active mentees" in res_over.data
+
+    with client.application.app_context():
+        # Clean up test rows
+        execute_query("DELETE FROM mentorship_relations WHERE mentor_id = 3")
+        execute_query("DELETE FROM mentorship_applications WHERE id IN (%s, %s)", (app_id, over_app_id))
+

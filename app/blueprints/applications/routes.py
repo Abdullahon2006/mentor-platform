@@ -1,8 +1,10 @@
 from datetime import date
 from flask import render_template, request, redirect, url_for, flash
 from app.blueprints.applications import applications_bp
-from app.db import fetch_one, fetch_all, execute_query
+from app.db import fetch_one, fetch_all, execute_query, get_db
 from app.auth_util import login_required, role_required, get_current_user
+
+MENTOR_CAPACITY = 5
 
 @applications_bp.route('/mentors')
 def browse_mentors():
@@ -293,15 +295,29 @@ def decide_application(app_id):
         flash("This application has already been processed.", "warning")
         return redirect(url_for('applications.list_applications'))
 
-    # Update application status
-    update_sql = """
-        UPDATE mentorship_applications
-        SET status = %s, decided_at = NOW()
-        WHERE id = %s
-    """
-    execute_query(update_sql, (decision, app_id))
-
     mentee_id = application['mentee_id']
+
+    # Task 1: Check mentor capacity (max 5 active mentees) before accepting
+    if decision == 'ACCEPTED':
+        active = fetch_one(
+            "SELECT COUNT(*) AS cnt FROM mentorship_relations WHERE mentor_id = %s AND status = 'ACTIVE'",
+            (mentor_id,)
+        )['cnt']
+        if active >= MENTOR_CAPACITY:
+            flash(f"You already have {MENTOR_CAPACITY} active mentees.", "warning")
+            return redirect(url_for('applications.list_applications'))
+
+    # Task 2: Atomic transaction with double-click guard
+    conn = get_db()
+    _, changed = execute_query(
+        "UPDATE mentorship_applications SET status = %s, decided_at = NOW() WHERE id = %s AND status = 'PENDING'",
+        (decision, app_id),
+        commit=False
+    )
+    if not changed:
+        conn.rollback()
+        flash("This application has already been processed.", "warning")
+        return redirect(url_for('applications.list_applications'))
 
     if decision == 'ACCEPTED':
         # Create active mentorship relationship in mentorship_relations (Member 4 table)
@@ -309,17 +325,20 @@ def decide_application(app_id):
             INSERT INTO mentorship_relations (application_id, mentee_id, mentor_id, start_date, status)
             VALUES (%s, %s, %s, %s, 'ACTIVE')
         """
-        execute_query(rel_sql, (app_id, mentee_id, mentor_id, date.today()))
+        execute_query(rel_sql, (app_id, mentee_id, mentor_id, date.today()), commit=False)
 
         # Send notification to mentee
         notif_msg = f"{user['first_name']} {user['last_name']} accepted your mentorship application! You can now schedule meetings."
-        execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)", (mentee_id, "Application Accepted!", notif_msg))
+        execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)",
+                      (mentee_id, "Application Accepted!", notif_msg), commit=False)
         flash("Application accepted! An active mentorship relationship has been established.", "success")
     else:
         notif_msg = f"{user['first_name']} {user['last_name']} was unable to accept your application at this time."
-        execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)", (mentee_id, "Application Update", notif_msg))
+        execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)",
+                      (mentee_id, "Application Update", notif_msg), commit=False)
         flash("Application declined.", "info")
 
+    conn.commit()
     return redirect(url_for('applications.list_applications'))
 
 @applications_bp.route('/applications/<int:app_id>/withdraw', methods=['POST'])
