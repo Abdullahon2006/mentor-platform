@@ -172,6 +172,13 @@ def fetch_one(sql, params=None):
             cursor.close()
     else:
         adapted_sql = _adapt_sql_for_sqlite(sql)
+        # SQLite has no row locks and no SELECT ... FOR UPDATE. The closest equivalent is
+        # BEGIN IMMEDIATE, which takes the database write lock until commit/rollback, so
+        # concurrent "lock, check, insert" sequences still run one after another.
+        if re.search(r'\bFOR\s+UPDATE\b', adapted_sql, flags=re.IGNORECASE):
+            adapted_sql = re.sub(r'\s*\bFOR\s+UPDATE\b', '', adapted_sql, flags=re.IGNORECASE)
+            if not conn.in_transaction:
+                conn.execute('BEGIN IMMEDIATE')
         cursor = conn.cursor()
         try:
             cursor.execute(adapted_sql, params or ())
