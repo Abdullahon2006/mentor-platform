@@ -37,6 +37,14 @@ mysql -u root -p < sql/01_schema.sql
 mysql -u root -p < sql/02_seed_data.sql
 ```
 
+No local MySQL? Run it with Docker:
+```bash
+docker run -d --name mentor-mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -p 3306:3306 mysql:8.0
+docker exec -i mentor-mysql mysql -uroot -h127.0.0.1 < sql/01_schema.sql
+docker exec -i mentor-mysql mysql -uroot -h127.0.0.1 < sql/02_seed_data.sql
+```
+Seed password hashes use scrypt, so use Python 3.10+ built with OpenSSL (the macOS system Python 3.9 has no `hashlib.scrypt`).
+
 ### 2. Environment Configuration
 Configure database connection variables in `.env`:
 ```bash
@@ -69,5 +77,5 @@ All seed accounts use the default password: **`password123`**
 1. **CQ-01 (Ravan)**: Personal Dashboard Summary (`users`, `notifications`, `mentorship_applications`, `mentorship_relations`, `meetings`).
 2. **CQ-02 (Denils)**: Multi-Criteria Mentor Recommendation Engine (`users`, `user_skills`, `reviews_and_ratings`, `mentorship_relations`).
 3. **CQ-03 (Abdullokhon)**: Mentee Goal Progress & Activity Correlation (`mentorship_goals`, `mentorship_applications`, `mentorship_relations`, `meetings`).
-4. **CQ-04 (Gaffar)**: Availability Occupancy & Free-Slot Finder (`mentor_availability`, `mentorship_relations`, `meetings`).
+4. **CQ-04 (Gaffar)**: Mentor Weekly Utilization & Availability Analysis (`users`, `mentor_availability`, `mentorship_relations`, `meetings`).
 5. **CQ-05 (Raimbek)**: Mentor Leaderboard & Engagement Metrics (`users`, `mentorship_relations`, `meetings`, `reviews_and_ratings`).

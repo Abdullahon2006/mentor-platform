@@ -28,16 +28,79 @@
                     <a href="{{ url_for('schedule.book_meeting', relation_id=rel.id) }}" class="btn btn-success fw-semibold">
                         <i class="bi bi-calendar-plus"></i> Schedule Meeting
                     </a>
-                    
-                    <form method="POST" action="{{ url_for('relations.update_relation_status', relation_id=rel.id) }}" class="d-inline" onsubmit="return confirm('Mark this mentorship as completed?');">
-                        <input type="hidden" name="status" value="COMPLETED">
-                        <button type="submit" class="btn btn-outline-primary">Complete Program</button>
-                    </form>
                     {% endif %}
+                    {% if rel.status == 'ACTIVE' %}
+                    <button type="button" class="btn btn-outline-warning" data-bs-toggle="modal" data-bs-target="#statusModal" data-status="PAUSED" data-label="Pause mentorship">Pause</button>
+                    {% elif rel.status == 'PAUSED' %}
+                    <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#statusModal" data-status="ACTIVE" data-label="Resume mentorship">Resume</button>
+                    {% endif %}
+                    {% if rel.status in ('ACTIVE', 'PAUSED') %}
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#statusModal" data-status="COMPLETED" data-label="Complete mentorship">Complete</button>
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#statusModal" data-status="TERMINATED" data-label="Terminate mentorship">Terminate</button>
+                    {% endif %}
+                    {% if user.role == 'ADMIN' %}
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteRelationModal">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% if rel.notes %}
+            <div class="mt-3 pt-3 border-top">
+                <strong class="small text-muted text-uppercase">Notes</strong>
+                <p class="small mb-0" style="white-space: pre-line;">{{ rel.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Status change modal (one modal, filled by the clicked button) -->
+    {% if rel.status in ('ACTIVE', 'PAUSED') %}
+    <div class="modal fade" id="statusModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" action="{{ url_for('relations.update_relation_status', relation_id=rel.id) }}">
+                    <input type="hidden" name="status" id="statusModalValue">
+                    <div class="modal-header">
+                        <h6 class="modal-title fw-bold" id="statusModalTitle">Change status</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="small text-muted mb-2">Pausing, completing or terminating cancels all upcoming scheduled meetings. The other person gets a notification.</p>
+                        <label class="form-label small fw-semibold">Note (optional)</label>
+                        <textarea class="form-control" name="notes" rows="2" placeholder="Why are you changing the status?"></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary btn-sm">Confirm</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('statusModal').addEventListener('show.bs.modal', function (ev) {
+            document.getElementById('statusModalValue').value = ev.relatedTarget.dataset.status;
+            document.getElementById('statusModalTitle').textContent = ev.relatedTarget.dataset.label;
+        });
+    </script>
+    {% endif %}
+
+    {% if user.role == 'ADMIN' %}
+    <div class="modal fade" id="deleteRelationModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-body small">Delete this mentorship with all its meetings, notes and reviews? This cannot be undone.</div>
+                <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Keep</button>
+                    <form method="POST" action="{{ url_for('relations.delete_relation', relation_id=rel.id) }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Meetings & Sessions History -->
     <div class="col-lg-8">
