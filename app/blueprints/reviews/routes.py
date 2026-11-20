@@ -238,6 +238,7 @@ def goal_analytics():
             g.title AS goal_title,
             g.status AS goal_status,
             g.target_completion_date,
+            DATEDIFF(g.target_completion_date, CURRENT_DATE) AS days_until_target,
             COALESCE(CONCAT(mentor.first_name, ' ', mentor.last_name), 'No Mentor Yet') AS assigned_mentor,
             COUNT(DISTINCT mt.id) AS total_completed_sessions,
             MAX(mt.scheduled_start) AS latest_session_date

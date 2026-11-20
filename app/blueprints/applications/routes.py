@@ -138,6 +138,26 @@ def manage_goals():
                 execute_query(insert_sql, (user_id, title, description, target_date))
                 flash("Goal created successfully!", "success")
 
+        elif action == 'edit':
+            goal_id = request.form.get('goal_id')
+            title = request.form.get('title', '').strip()
+            description = request.form.get('description', '').strip()
+            target_date = request.form.get('target_date') or None
+
+            if not title:
+                flash("Goal title is required.", "danger")
+            else:
+                update_sql = """
+                    UPDATE mentorship_goals 
+                    SET title = %s, description = %s, target_completion_date = %s
+                    WHERE id = %s AND mentee_id = %s
+                """
+                _, changed = execute_query(update_sql, (title, description, target_date, goal_id, user_id))
+                if changed:
+                    flash("Goal updated successfully!", "success")
+                else:
+                    flash("Goal not found or no changes made.", "info")
+
         elif action == 'update_status':
             goal_id = request.form.get('goal_id')
             new_status = request.form.get('status')
@@ -157,7 +177,9 @@ def manage_goals():
     # Complex Query 3: Mentee Goal Progress & Activity Correlation
     goals_sql = """
         SELECT
-            g.id, g.title, g.description, g.target_completion_date, g.status, g.created_at,
+            g.id, g.title, g.description, g.target_completion_date,
+            DATEDIFF(g.target_completion_date, CURRENT_DATE) AS days_until_target,
+            g.status, g.created_at,
             COALESCE(CONCAT(m.first_name, ' ', m.last_name), 'No Mentor Assigned') AS assigned_mentor,
             m.id AS mentor_id,
             COUNT(DISTINCT mt.id) AS total_completed_sessions,
