@@ -1,6 +1,7 @@
 from flask import render_template, request, redirect, url_for, flash
+from flask import g
 from app.blueprints.skills import skills_bp
-from app.db import fetch_one, fetch_all, execute_query
+from app.db import fetch_one, fetch_all, execute_query, get_db
 from app.auth_util import login_required, role_required, get_current_user
 
 @skills_bp.route('/')
@@ -158,5 +159,152 @@ def admin_create_skill():
         flash(f"Skill '{name}' successfully created in taxonomy.", "success")
     except Exception as err:
         flash(f"Could not create skill: {err}", "danger")
+
+    return redirect(url_for('skills.list_skills'))
+
+@skills_bp.route('/recommendations')
+@role_required('MENTEE')
+def mentor_recommendations():
+    """
+    COMPLEX QUERY 2 (CQ-02): Multi-Criteria Mentor Recommendation Engine
+    Recommends mentors matching current mentee's declared skills and goals.
+    """
+    user = get_current_user()
+    mentee_id = user['id']
+
+    category = request.args.get('category', '').strip()
+
+    complex_sql = """
+        SELECT
+            m.id AS mentor_id,
+            CONCAT(m.first_name, ' ', m.last_name) AS mentor_name,
+            m.current_title,
+            m.organization,
+            COUNT(DISTINCT us.skill_id) AS matched_skills_count,
+            ROUND(AVG(CASE
+                WHEN us.proficiency = 'EXPERT' THEN 4
+                WHEN us.proficiency = 'ADVANCED' THEN 3
+                WHEN us.proficiency = 'INTERMEDIATE' THEN 2
+                ELSE 1 END), 2) AS avg_skill_score,
+            COALESCE(r.avg_rating, 0.0) AS mentor_rating,
+            COUNT(DISTINCT rel.id) AS active_mentees_count
+        FROM users m
+        JOIN user_skills us ON m.id = us.user_id
+        JOIN skills s ON us.skill_id = s.id
+        LEFT JOIN (
+            SELECT reviewee_id, ROUND(AVG(rating), 2) AS avg_rating
+            FROM reviews_and_ratings
+            GROUP BY reviewee_id
+        ) r ON m.id = r.reviewee_id
+        LEFT JOIN mentorship_relations rel ON m.id = rel.mentor_id AND rel.status = 'ACTIVE'
+        WHERE m.role = 'MENTOR'
+        AND (%s = '' OR s.category = %s)
+          AND us.skill_id IN (
+              SELECT skill_id FROM user_skills WHERE user_id = %s
+          )
+          AND m.id NOT IN (
+              SELECT mentor_id FROM mentorship_relations
+              WHERE status = 'ACTIVE'
+              GROUP BY mentor_id HAVING COUNT(*) >= 5
+          )
+        GROUP BY m.id, m.first_name, m.last_name, m.current_title, m.organization, r.avg_rating
+        HAVING matched_skills_count >= 1
+        ORDER BY matched_skills_count DESC, avg_skill_score DESC, mentor_rating DESC
+    """
+
+    recommendations = fetch_all(
+        complex_sql,
+        (category, category, mentee_id)
+    )
+
+    categories = fetch_all(
+        "SELECT DISTINCT category FROM skills ORDER BY category"
+    )
+
+    return render_template(
+        'reviews/recommendations.html',
+        recommendations=recommendations,
+        categories=categories,
+        selected_category=category
+    )
+
+@skills_bp.route('/admin/<int:skill_id>/edit', methods=['POST'])
+@role_required('ADMIN')
+def admin_edit_skill(skill_id):
+    """Allows admins to edit an existing skill."""
+    name = request.form.get('name', '').strip()
+    category = request.form.get('category', '').strip()
+    description = request.form.get('description', '').strip()
+    if not name or not category:
+        flash("Skill name and category are required.", "danger")
+        return redirect(url_for('skills.list_skills'))
+    skill = fetch_one(
+        "SELECT id FROM skills WHERE id = %s",
+        (skill_id,)
+    )
+    if skill is None:
+        flash("The selected skill does not exist.", "danger")
+        return redirect(url_for('skills.list_skills'))
+    update_sql = """
+        UPDATE skills
+        SET name = %s, category = %s, description = %s
+        WHERE id = %s
+    """
+
+    try:
+        execute_query(update_sql, (name, category, description, skill_id))
+        flash(f"Skill '{name}' successfully updated.", "success")
+    except Exception:
+        flash("Could not update skill. The skill name may already exist.", "danger")
+
+    return redirect(url_for('skills.list_skills'))
+
+@skills_bp.route('/admin/<int:skill_id>/delete', methods=['POST'])
+@role_required('ADMIN')
+def admin_delete_skill(skill_id):
+    """Allows admins to delete a skill from the taxonomy."""
+    conn = get_db()
+    mode = g.db_mode
+
+    try:
+        if mode == 'DEMO_SQLITE':
+            conn.execute("BEGIN IMMEDIATE")
+
+        skill = fetch_one(
+            "SELECT id, name FROM skills WHERE id = %s"
+            + (" FOR UPDATE" if mode == 'MYSQL' else ""),
+            (skill_id,)
+        )
+
+        if skill is None:
+            conn.rollback()
+            flash("The selected skill does not exist.", "danger")
+            return redirect(url_for('skills.list_skills'))
+
+        assigned_users = fetch_one(
+            "SELECT COUNT(*) AS total FROM user_skills WHERE skill_id = %s",
+            (skill_id,)
+        )
+
+        if assigned_users['total'] > 0:
+            conn.rollback()
+            flash(
+                "Cannot delete this skill because it is assigned to users.",
+                "danger"
+            )
+            return redirect(url_for('skills.list_skills'))
+
+        execute_query(
+            "DELETE FROM skills WHERE id = %s",
+            (skill_id,),
+            commit=False
+        )
+
+        conn.commit()
+        flash(f"Skill '{skill['name']}' successfully deleted.", "success")
+
+    except Exception:
+        conn.rollback()
+        flash("Could not delete the skill.", "danger")
 
     return redirect(url_for('skills.list_skills'))

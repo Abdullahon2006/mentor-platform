@@ -1,4 +1,4 @@
-
+from flask import g
 from unittest.mock import patch
 import pytest
 from app import create_app
@@ -284,10 +284,10 @@ def test_recommendations_category_filter(client):
         'app.auth_util.get_current_user',
         return_value=fake_user
     ), patch(
-        'app.blueprints.reviews.routes.get_current_user',
+        'app.blueprints.skills.routes.get_current_user',
         return_value=fake_user
     ), patch(
-        'app.blueprints.reviews.routes.fetch_all'
+        'app.blueprints.skills.routes.fetch_all'
     ) as mock_fetch:
 
         mock_fetch.side_effect = [
@@ -301,7 +301,7 @@ def test_recommendations_category_filter(client):
 
         with client.application.test_request_context():
             recommendations_url = url_for(
-                'reviews.mentor_recommendations',
+                'skills.mentor_recommendations',
                 category='Programming'
             )
 
@@ -314,3 +314,180 @@ def test_recommendations_category_filter(client):
         assert 'JOIN skills s ON us.skill_id = s.id' in sql
         assert 's.category = %s' in sql
         assert params == ('Programming', 'Programming', 1)
+
+def test_admin_edit_rejects_empty_name(client):
+    fake_admin = {
+        'id': 1,
+        'role': 'ADMIN'
+    }
+
+    with patch(
+        'app.auth_util.get_current_user',
+        return_value=fake_admin
+    ):
+        with client.session_transaction() as session:
+            session['user_id'] = 1
+            session['role'] = 'ADMIN'
+
+        response = client.post(
+            '/skills/admin/5/edit',
+            data={
+                'name': '',
+                'category': 'Programming',
+                'description': 'A programming skill'
+            }
+        )
+
+        assert response.status_code == 302
+        assert response.headers['Location'].endswith('/skills/')
+
+def test_admin_edit_skill_success(client):
+    fake_admin = {
+        'id': 1,
+        'role': 'ADMIN'
+    }
+
+    with patch(
+        'app.auth_util.get_current_user',
+        return_value=fake_admin
+    ), patch(
+        'app.blueprints.skills.routes.fetch_one',
+        return_value={'id': 5}
+    ), patch(
+        'app.blueprints.skills.routes.execute_query'
+    ) as mock_execute:
+
+        with client.session_transaction() as session:
+            session['user_id'] = 1
+            session['role'] = 'ADMIN'
+
+        response = client.post(
+            '/skills/admin/5/edit',
+            data={
+                'name': 'Python Programming',
+                'category': 'Programming',
+                'description': 'Developing applications with Python'
+            }
+        )
+
+        assert response.status_code == 302
+
+        mock_execute.assert_called_once_with(
+            """
+        UPDATE skills
+        SET name = %s, category = %s, description = %s
+        WHERE id = %s
+    """,
+            (
+                'Python Programming',
+                'Programming',
+                'Developing applications with Python',
+                5
+            )
+        )
+
+def test_admin_delete_rejects_assigned_skill(client):
+    fake_admin = {
+        'id': 1,
+        'role': 'ADMIN'
+    }
+
+    with patch(
+        'app.auth_util.get_current_user',
+        return_value=fake_admin
+    ), patch(
+        'app.blueprints.skills.routes.fetch_one'
+    ) as mock_fetch, patch(
+        'app.blueprints.skills.routes.execute_query'
+    ) as mock_execute, patch(
+        'app.blueprints.skills.routes.get_db'
+    ) as mock_get_db:
+        mock_fetch.side_effect = [
+            {'id': 5, 'name': 'Python'},
+            {'total': 2}
+        ]
+
+        mock_get_db.side_effect = lambda: setattr(g, 'db_mode', 'MYSQL') or mock_get_db.return_value
+
+        with client.session_transaction() as session:
+            session['user_id'] = 1
+            session['role'] = 'ADMIN'
+
+        response = client.post('/skills/admin/5/delete')
+
+        assert response.status_code == 302
+        mock_execute.assert_not_called()
+        mock_get_db.return_value.rollback.assert_called_once()
+
+def test_admin_delete_unassigned_skill(client):
+    fake_admin = {
+        'id': 1,
+        'role': 'ADMIN'
+    }
+
+    with patch(
+        'app.auth_util.get_current_user',
+        return_value=fake_admin
+    ), patch(
+        'app.blueprints.skills.routes.fetch_one'
+    ) as mock_fetch, patch(
+        'app.blueprints.skills.routes.execute_query'
+    ) as mock_execute, patch(
+        'app.blueprints.skills.routes.get_db'
+    ) as mock_get_db:
+
+        mock_fetch.side_effect = [
+            {'id': 5, 'name': 'Python'},
+            {'total': 0}
+        ]
+
+        mock_get_db.side_effect = lambda: setattr(g, 'db_mode', 'MYSQL') or mock_get_db.return_value
+
+        with client.session_transaction() as session:
+            session['user_id'] = 1
+            session['role'] = 'ADMIN'
+
+        response = client.post('/skills/admin/5/delete')
+
+        assert response.status_code == 302
+
+        mock_execute.assert_called_once_with(
+        "DELETE FROM skills WHERE id = %s",
+        (5,),
+        commit=False
+        )
+
+        mock_get_db.return_value.commit.assert_called_once()
+
+def test_non_admin_cannot_edit_or_delete_skills(client):
+    fake_user = {
+        'id': 1,
+        'role': 'MENTEE'
+    }
+
+    with patch(
+        'app.auth_util.get_current_user',
+        return_value=fake_user
+    ), patch(
+        'app.blueprints.skills.routes.execute_query'
+    ) as mock_execute:
+
+        with client.session_transaction() as session:
+            session['user_id'] = 1
+            session['role'] = 'MENTEE'
+
+        edit_response = client.post(
+            '/skills/admin/5/edit',
+            data={
+                'name': 'Modified Python',
+                'category': 'Programming',
+                'description': 'Modified description'
+            }
+        )
+
+        delete_response = client.post('/skills/admin/5/delete')
+
+        assert edit_response.status_code in (302, 403)
+        assert delete_response.status_code in (302, 403)
+
+        mock_execute.assert_not_called()
