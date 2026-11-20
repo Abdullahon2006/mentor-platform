@@ -40,7 +40,22 @@ MentorMatch{% endblock %} {% block content %}
                     {{ gp.goal_status }}
                   </span>
                 </td>
-                <td>{{ gp.target_completion_date or 'No target set' }}</td>
+                <td>
+                  {% if gp.target_completion_date %}
+                    <div>{{ gp.target_completion_date }}</div>
+                    {% if gp.days_until_target is not none %}
+                      {% if gp.days_until_target > 0 %}
+                        <span class="badge bg-light text-primary border small"><i class="bi bi-hourglass-split"></i> {{ gp.days_until_target }}d left</span>
+                      {% elif gp.days_until_target == 0 %}
+                        <span class="badge bg-light text-warning border small"><i class="bi bi-exclamation-circle"></i> Due today</span>
+                      {% else %}
+                        <span class="badge bg-light text-danger border small"><i class="bi bi-exclamation-triangle"></i> {{ -gp.days_until_target }}d overdue</span>
+                      {% endif %}
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted">No target set</span>
+                  {% endif %}
+                </td>
                 <td>
                   <span class="badge bg-light text-dark border"
                     >{{ gp.assigned_mentor }}</span

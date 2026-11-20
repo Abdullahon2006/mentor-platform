@@ -164,3 +164,80 @@ def test_mentor_decide_application_capacity_and_atomic(client):
             execute_query("DELETE FROM notifications WHERE user_id IN (8, 9, 10) AND title = 'Application Accepted!'")
 
 
+def test_mentee_edit_goal_and_datediff(client):
+    # Login as Mentee Ali Yilmaz (id=6)
+    client.post('/auth/login', data={
+        'email': 'ali.yilmaz@itu.edu.tr',
+        'password': 'password123'
+    }, follow_redirects=True)
+
+    # 1. Create a goal with future target date
+    res_create = client.post('/goals/manage', data={
+        'action': 'create',
+        'title': 'Original Goal Title',
+        'description': 'Original description',
+        'target_date': '2026-12-31'
+    }, follow_redirects=True)
+    assert res_create.status_code == 200
+    assert b"Goal created successfully!" in res_create.data
+
+    from app.db import fetch_one, execute_query
+    with client.application.app_context():
+        created_goal = fetch_one(
+            "SELECT id, title, target_completion_date FROM mentorship_goals WHERE mentee_id = 6 AND title = 'Original Goal Title'"
+        )
+        assert created_goal is not None
+        goal_id = created_goal['id']
+
+    try:
+        # 2. Check /goals/manage displays days remaining and edit button
+        res_view = client.get('/goals/manage')
+        assert res_view.status_code == 200
+        assert b"days remaining" in res_view.data or b"Target Date: 2026-12-31" in res_view.data
+        assert f'#editGoalModal{goal_id}'.encode() in res_view.data
+
+        # 3. Check /analytics/goals (reviews CQ-03)
+        res_analytics = client.get('/analytics/goals')
+        assert res_analytics.status_code == 200
+        assert b"Original Goal Title" in res_analytics.data
+        assert b"d left" in res_analytics.data
+
+        # 4. Edit the goal
+        res_edit = client.post('/goals/manage', data={
+            'action': 'edit',
+            'goal_id': goal_id,
+            'title': 'Updated Advanced Goal Title',
+            'description': 'Updated detailed milestone description',
+            'target_date': '2026-11-25'
+        }, follow_redirects=True)
+        assert res_edit.status_code == 200
+        assert b"Goal updated successfully!" in res_edit.data
+        assert b"Updated Advanced Goal Title" in res_edit.data
+
+        # Verify DB updated
+        with client.application.app_context():
+            updated_goal = fetch_one(
+                "SELECT title, description, target_completion_date FROM mentorship_goals WHERE id = %s",
+                (goal_id,)
+            )
+            assert updated_goal['title'] == 'Updated Advanced Goal Title'
+            assert updated_goal['description'] == 'Updated detailed milestone description'
+            assert str(updated_goal['target_completion_date']) == '2026-11-25'
+
+        # 5. Validation: empty title should flash danger
+        res_bad_edit = client.post('/goals/manage', data={
+            'action': 'edit',
+            'goal_id': goal_id,
+            'title': '   ',
+            'description': 'Empty title test',
+            'target_date': ''
+        }, follow_redirects=True)
+        assert res_bad_edit.status_code == 200
+        assert b"Goal title is required." in res_bad_edit.data
+
+    finally:
+        with client.application.app_context():
+            execute_query("DELETE FROM mentorship_goals WHERE id = %s", (goal_id,))
+
+
+
