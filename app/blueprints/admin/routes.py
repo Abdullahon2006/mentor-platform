@@ -1,4 +1,7 @@
+import sqlite3
+
 from flask import render_template, request, redirect, url_for, flash
+from mysql.connector import IntegrityError as MySQLIntegrityError
 from app.blueprints.admin import admin_bp
 from app.db import fetch_one, fetch_all, execute_query
 from app.auth_util import role_required, get_current_user
@@ -36,4 +39,29 @@ def change_user_role(user_id):
     if new_role in ('MENTEE', 'MENTOR', 'ADMIN'):
         execute_query("UPDATE users SET role = %s WHERE id = %s", (new_role, user_id))
         flash("User role updated successfully.", "success")
+    return redirect(url_for('admin.index'))
+
+
+@admin_bp.route('/users/<int:user_id>/delete', methods=['POST'])
+@role_required('ADMIN')
+def delete_user(user_id):
+    """Delete a user while preventing an admin from deleting their own account."""
+    current_user = get_current_user()
+    if current_user['id'] == user_id:
+        flash("You cannot delete your own active account.", "danger")
+        return redirect(url_for('admin.index'))
+
+    try:
+        _, deleted_count = execute_query("DELETE FROM users WHERE id = %s", (user_id,))
+    except (MySQLIntegrityError, sqlite3.IntegrityError):
+        flash(
+            "This user cannot be deleted because their account is linked to mentorship history.",
+            "danger"
+        )
+    else:
+        if deleted_count > 0:
+            flash("User deleted successfully.", "success")
+        else:
+            flash("User not found.", "warning")
+
     return redirect(url_for('admin.index'))

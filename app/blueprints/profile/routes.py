@@ -148,7 +148,7 @@ def dashboard():
     else:
         # Admin dashboard
         counts_sql = """
-            SELECT 
+            SELECT
                 (SELECT COUNT(*) FROM users WHERE role = 'MENTEE') AS mentee_count,
                 (SELECT COUNT(*) FROM users WHERE role = 'MENTOR') AS mentor_count,
                 (SELECT COUNT(*) FROM mentorship_relations WHERE status = 'ACTIVE') AS active_relations_count,
@@ -157,6 +157,12 @@ def dashboard():
         """
         stats = fetch_one(counts_sql)
         return render_template('dashboard/admin_dashboard.html', user=user, stats=stats, notifications=notifications)
+
+@profile_bp.route('/profile')
+@login_required
+def profile():
+    """Milestone-compatible alias for the profile overview."""
+    return redirect(url_for('profile.dashboard'))
 
 @profile_bp.route('/profile/edit', methods=['GET', 'POST'])
 @login_required
@@ -170,7 +176,7 @@ def edit_profile():
         bio = request.form.get('bio', '').strip()
 
         update_sql = """
-            UPDATE users 
+            UPDATE users
             SET first_name = %s, last_name = %s, current_title = %s, organization = %s, bio = %s
             WHERE id = %s
         """
@@ -186,4 +192,22 @@ def mark_notification_read(notif_id):
     user = get_current_user()
     update_sql = "UPDATE notifications SET is_read = TRUE WHERE id = %s AND user_id = %s"
     execute_query(update_sql, (notif_id, user['id']))
+    return redirect(url_for('profile.dashboard'))
+
+
+@profile_bp.route('/notifications/<int:notif_id>/delete', methods=['POST'])
+@login_required
+def delete_notification(notif_id):
+    """Delete a notification only when it belongs to the signed-in user."""
+    user = get_current_user()
+    _, deleted_count = execute_query(
+        "DELETE FROM notifications WHERE id = %s AND user_id = %s",
+        (notif_id, user['id'])
+    )
+
+    if deleted_count > 0:
+        flash("Notification dismissed.", "success")
+    else:
+        flash("Notification not found.", "warning")
+
     return redirect(url_for('profile.dashboard'))

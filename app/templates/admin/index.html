@@ -27,7 +27,7 @@
                                 <th>Role</th>
                                 <th>Title / Org</th>
                                 <th>Registered</th>
-                                <th class="text-end">Change Role</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -51,6 +51,13 @@
                                         </select>
                                         <button type="submit" class="btn btn-sm btn-outline-primary">Save</button>
                                     </form>
+                                    {% if not current_user or current_user.id != u.id %}
+                                    <form method="POST" action="{{ url_for('admin.delete_user', user_id=u.id) }}" class="d-inline-block ms-1" onsubmit="return confirm('Delete this user account?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                    </form>
+                                    {% else %}
+                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1" disabled title="You cannot delete your own active account">Delete</button>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}

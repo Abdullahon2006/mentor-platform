@@ -188,6 +188,9 @@
                                 <button type="submit" class="btn btn-link btn-sm p-0 text-decoration-none" style="font-size: 0.75rem;">Mark read</button>
                             </form>
                             {% endif %}
+                            <form method="POST" action="{{ url_for('profile.delete_notification', notif_id=n.id) }}" class="d-inline ms-2">
+                                <button type="submit" class="btn btn-link btn-sm p-0 text-danger text-decoration-none" style="font-size: 0.75rem;">Dismiss</button>
+                            </form>
                         </div>
                         {% endfor %}
                     </div>
