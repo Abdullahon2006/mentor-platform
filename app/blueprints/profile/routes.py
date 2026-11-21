@@ -209,6 +209,12 @@ def dashboard():
         stats = fetch_one(counts_sql)
         return render_template('dashboard/admin_dashboard.html', user=user, dashboard_summary=dashboard_summary, stats=stats, notifications=notifications)
 
+@profile_bp.route('/profile')
+@login_required
+def profile():
+    """Milestone-compatible alias for the profile overview."""
+    return redirect(url_for('profile.dashboard'))
+
 @profile_bp.route('/profile/edit', methods=['GET', 'POST'])
 @login_required
 def edit_profile():
@@ -269,3 +275,20 @@ def mark_all_notifications_read():
 
     return redirect(request.referrer or url_for('profile.dashboard'))
 
+
+@profile_bp.route('/notifications/<int:notif_id>/delete', methods=['POST'])
+@login_required
+def delete_notification(notif_id):
+    """Delete a notification only when it belongs to the signed-in user."""
+    user = get_current_user()
+    _, deleted_count = execute_query(
+        "DELETE FROM notifications WHERE id = %s AND user_id = %s",
+        (notif_id, user['id'])
+    )
+
+    if deleted_count > 0:
+        flash("Notification dismissed.", "success")
+    else:
+        flash("Notification not found.", "warning")
+
+    return redirect(request.referrer or url_for('profile.dashboard'))
