@@ -1,0 +1,103 @@
+erDiagram
+    USERS ||--o{ USER_SKILLS : "possesses"
+    SKILLS ||--o{ USER_SKILLS : "categorizes"
+    USERS ||--o{ MENTORSHIP_GOALS : "defines"
+    USERS ||--o{ MENTORSHIP_APPLICATIONS : "applies_as_mentee"
+    USERS ||--o{ MENTORSHIP_APPLICATIONS : "receives_as_mentor"
+    MENTORSHIP_GOALS ||--o{ MENTORSHIP_APPLICATIONS : "targets (optional)"
+    MENTORSHIP_APPLICATIONS ||--|| MENTORSHIP_RELATIONS : "formalizes (1:1)"
+    USERS ||--o{ MENTOR_AVAILABILITY : "publishes_slots"
+    MENTORSHIP_RELATIONS ||--o{ MEETINGS : "conducts"
+    MEETINGS ||--o{ MEETING_NOTES : "documents"
+    MENTORSHIP_RELATIONS ||--o{ REVIEWS_AND_RATINGS : "evaluated_through"
+    USERS ||--o{ NOTIFICATIONS : "receives"
+
+    USERS {
+        int id PK
+        string email UK
+        string password_hash
+        string first_name
+        string last_name
+        string role
+        string current_title
+        string organization
+        datetime created_at
+    }
+    SKILLS {
+        int id PK
+        string name UK
+        string category
+        string description
+    }
+    USER_SKILLS {
+        int id PK
+        int user_id FK
+        int skill_id FK
+        string proficiency
+        int years_of_experience
+    }
+    MENTORSHIP_GOALS {
+        int id PK
+        int mentee_id FK
+        string title
+        date target_completion_date
+        string status
+    }
+    MENTORSHIP_APPLICATIONS {
+        int id PK
+        int mentee_id FK
+        int mentor_id FK
+        int goal_id FK
+        string message
+        string status
+        datetime created_at
+    }
+    MENTORSHIP_RELATIONS {
+        int id PK
+        int application_id FK_UK
+        int mentee_id FK
+        int mentor_id FK
+        date start_date
+        date end_date
+        string status
+    }
+    MENTOR_AVAILABILITY {
+        int id PK
+        int mentor_id FK
+        int day_of_week
+        time start_time
+        time end_time
+        boolean is_active
+    }
+    MEETINGS {
+        int id PK
+        int relation_id FK
+        datetime scheduled_start
+        datetime scheduled_end
+        string meeting_link
+        string status
+    }
+    MEETING_NOTES {
+        int id PK
+        int meeting_id FK
+        int author_id FK
+        string summary
+        string action_items
+        datetime created_at
+    }
+    REVIEWS_AND_RATINGS {
+        int id PK
+        int relation_id FK
+        int reviewer_id FK
+        int reviewee_id FK
+        int rating
+        string review_text
+    }
+    NOTIFICATIONS {
+        int id PK
+        int user_id FK
+        string title
+        string message
+        boolean is_read
+        datetime created_at
+    }

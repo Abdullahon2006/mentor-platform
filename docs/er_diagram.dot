@@ -1,0 +1,260 @@
+
+digraph MentorMatchER {
+    graph [
+        rankdir=LR,
+        bgcolor="#FFFFFF",
+        fontname="Helvetica",
+        fontsize=12,
+        pad="0.5",
+        nodesep="0.5",
+        ranksep="0.8",
+        splines=spline
+    ];
+
+    node [
+        shape=none,
+        fontname="Helvetica",
+        fontsize=10
+    ];
+
+    edge [
+        fontname="Helvetica-Bold",
+        fontsize=9,
+        penwidth=1.4
+    ];
+
+    // Left rank
+    subgraph cluster_left {
+        style=invis;
+        skills;
+        user_skills;
+    }
+
+    // Center rank
+    subgraph cluster_center {
+        style=invis;
+        users;
+    }
+
+    // Right rank 1
+    subgraph cluster_r1 {
+        style=invis;
+        mentor_availability;
+        mentorship_goals;
+        notifications;
+    }
+
+    // Right rank 2
+    subgraph cluster_r2 {
+        style=invis;
+        mentorship_applications;
+        mentorship_relations;
+    }
+
+    // Right rank 3
+    subgraph cluster_r3 {
+        style=invis;
+        meetings;
+        meeting_notes;
+        reviews_and_ratings;
+    }
+
+    // Explicit rank order
+    skills -> user_skills [style=invis];
+    user_skills -> users [style=invis];
+    users -> mentorship_goals [style=invis];
+    mentorship_goals -> mentorship_applications [style=invis];
+    mentorship_applications -> mentorship_relations [style=invis];
+    mentorship_relations -> meetings [style=invis];
+
+    // TABLES WITH ROW-LEVEL LEFT & RIGHT PORTS
+    skills [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FFFFFF">
+            <tr><td bgcolor="#1A365D" colspan="4"><font color="white"><b>SKILLS (Taxonomy)</b></font></td></tr>
+            <tr><td port="id_w" width="1"></td><td align="left"><b>id</b> (PK)</td><td align="right"><font color="#718096">INT</font></td><td port="id_e" width="1"></td></tr>
+            <tr><td colspan="4" bgcolor="#CBD5E0" height="1"></td></tr>
+            <tr><td></td><td align="left">name (UK)</td><td align="right"><font color="#718096">VARCHAR(80)</font></td><td></td></tr>
+            <tr><td></td><td align="left">category</td><td align="right"><font color="#718096">VARCHAR(60)</font></td><td></td></tr>
+            <tr><td></td><td align="left">description</td><td align="right"><font color="#718096">TEXT</font></td><td></td></tr>
+        </table>
+    >];
+
+    user_skills [label=<
+        <table border="2" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FEFCBF">
+            <tr><td bgcolor="#B7791F" colspan="4"><font color="white"><b>USER_SKILLS (M:N Associative)</b></font></td></tr>
+            <tr><td port="id_w" width="1"></td><td align="left"><b>id</b> (PK)</td><td align="right"><font color="#718096">INT</font></td><td port="id_e" width="1"></td></tr>
+            <tr><td colspan="4" bgcolor="#D69E2E" height="1"></td></tr>
+            <tr><td port="uid_w" width="1"></td><td align="left"><b>user_id</b> (FK &rarr; users.id)</td><td align="right"><font color="#718096">INT</font></td><td port="uid_e" width="1"></td></tr>
+            <tr><td port="sid_w" width="1"></td><td align="left"><b>skill_id</b> (FK &rarr; skills.id)</td><td align="right"><font color="#718096">INT</font></td><td port="sid_e" width="1"></td></tr>
+            <tr><td></td><td align="left">proficiency</td><td align="right"><font color="#718096">ENUM</font></td><td></td></tr>
+            <tr><td></td><td align="left">years_of_experience</td><td align="right"><font color="#718096">INT</font></td><td></td></tr>
+            <tr><td colspan="4" align="center"><font color="#744210" point-size="8"><i>UNIQUE(user_id, skill_id)</i></font></td></tr>
+        </table>
+    >];
+
+    users [label=<
+        <table border="2" cellborder="0" cellspacing="0" cellpadding="5" bgcolor="#FFFFFF">
+            <tr><td bgcolor="#1A365D" colspan="4"><font color="white"><b>USERS (Core Entity)</b></font></td></tr>
+            <tr><td port="id_w" width="1"></td><td align="left"><b>id</b> (PK)</td><td align="right"><font color="#718096">INT</font></td><td port="id_e" width="1"></td></tr>
+            <tr><td colspan="4" bgcolor="#CBD5E0" height="1"></td></tr>
+            <tr><td></td><td align="left">email (UK)</td><td align="right"><font color="#718096">VARCHAR(150)</font></td><td></td></tr>
+            <tr><td></td><td align="left">password_hash</td><td align="right"><font color="#718096">VARCHAR(255)</font></td><td></td></tr>
+            <tr><td></td><td align="left">first_name, last_name</td><td align="right"><font color="#718096">VARCHAR(60)</font></td><td></td></tr>
+            <tr><td></td><td align="left">role (MENTEE/MENTOR/ADMIN)</td><td align="right"><font color="#718096">ENUM</font></td><td></td></tr>
+            <tr><td></td><td align="left">current_title, org</td><td align="right"><font color="#718096">VARCHAR(100)</font></td><td></td></tr>
+            <tr><td></td><td align="left">created_at</td><td align="right"><font color="#718096">DATETIME</font></td><td></td></tr>
+        </table>
+    >];
+
+    mentor_availability [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FFFFFF">
+            <tr><td bgcolor="#1A365D" colspan="4"><font color="white"><b>MENTOR_AVAILABILITY</b></font></td></tr>
+            <tr><td port="id_w" width="1"></td><td align="left"><b>id</b> (PK)</td><td align="right"><font color="#718096">INT</font></td><td port="id_e" width="1"></td></tr>
+            <tr><td colspan="4" bgcolor="#CBD5E0" height="1"></td></tr>
+            <tr><td port="mid_w" width="1"></td><td align="left">mentor_id (FK &rarr; users.id)</td><td align="right"><font color="#718096">INT</font></td><td port="mid_e" width="1"></td></tr>
+            <tr><td></td><td align="left">day_of_week (1-7)</td><td align="right"><font color="#718096">TINYINT</font></td><td></td></tr>
+            <tr><td></td><td align="left">start_time, end_time</td><td align="right"><font color="#718096">TIME</font></td><td></td></tr>
+            <tr><td></td><td align="left">is_active</td><td align="right"><font color="#718096">BOOL</font></td><td></td></tr>
+        </table>
+    >];
+
+    notifications [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FFFFFF">
+            <tr><td bgcolor="#1A365D" colspan="4"><font color="white"><b>NOTIFICATIONS</b></font></td></tr>
+            <tr><td port="id_w" width="1"></td><td align="left"><b>id</b> (PK)</td><td align="right"><font color="#718096">INT</font></td><td port="id_e" width="1"></td></tr>
+            <tr><td colspan="4" bgcolor="#CBD5E0" height="1"></td></tr>
+            <tr><td port="uid_w" width="1"></td><td align="left">user_id (FK &rarr; users.id)</td><td align="right"><font color="#718096">INT</font></td><td port="uid_e" width="1"></td></tr>
+            <tr><td></td><td align="left">title</td><td align="right"><font color="#718096">VARCHAR(120)</font></td><td></td></tr>
+            <tr><td></td><td align="left">message</td><td align="right"><font color="#718096">TEXT</font></td><td></td></tr>
+            <tr><td></td><td align="left">is_read</td><td align="right"><font color="#718096">BOOL</font></td><td></td></tr>
+            <tr><td></td><td align="left">created_at</td><td align="right"><font color="#718096">DATETIME</font></td><td></td></tr>
+        </table>
+    >];
+
+    mentorship_goals [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FFFFFF">
+            <tr><td bgcolor="#1A365D" colspan="4"><font color="white"><b>MENTORSHIP_GOALS</b></font></td></tr>
+            <tr><td port="id_w" width="1"></td><td align="left"><b>id</b> (PK)</td><td align="right"><font color="#718096">INT</font></td><td port="id_e" width="1"></td></tr>
+            <tr><td colspan="4" bgcolor="#CBD5E0" height="1"></td></tr>
+            <tr><td port="mid_w" width="1"></td><td align="left">mentee_id (FK &rarr; users.id)</td><td align="right"><font color="#718096">INT</font></td><td port="mid_e" width="1"></td></tr>
+            <tr><td></td><td align="left">title</td><td align="right"><font color="#718096">VARCHAR(120)</font></td><td></td></tr>
+            <tr><td></td><td align="left">target_completion_date</td><td align="right"><font color="#718096">DATE</font></td><td></td></tr>
+            <tr><td></td><td align="left">status</td><td align="right"><font color="#718096">ENUM</font></td><td></td></tr>
+        </table>
+    >];
+
+    mentorship_applications [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FFFFFF">
+            <tr><td bgcolor="#1A365D" colspan="4"><font color="white"><b>MENTORSHIP_APPLICATIONS</b></font></td></tr>
+            <tr><td port="id_w" width="1"></td><td align="left"><b>id</b> (PK)</td><td align="right"><font color="#718096">INT</font></td><td port="id_e" width="1"></td></tr>
+            <tr><td colspan="4" bgcolor="#CBD5E0" height="1"></td></tr>
+            <tr><td port="mentee_w" width="1"></td><td align="left">mentee_id (FK &rarr; users.id)</td><td align="right"><font color="#718096">INT</font></td><td port="mentee_e" width="1"></td></tr>
+            <tr><td port="mentor_w" width="1"></td><td align="left">mentor_id (FK &rarr; users.id)</td><td align="right"><font color="#718096">INT</font></td><td port="mentor_e" width="1"></td></tr>
+            <tr><td port="goal_w" width="1"></td><td align="left">goal_id (FK &rarr; goals.id, opt)</td><td align="right"><font color="#718096">INT</font></td><td port="goal_e" width="1"></td></tr>
+            <tr><td></td><td align="left">message</td><td align="right"><font color="#718096">TEXT</font></td><td></td></tr>
+            <tr><td></td><td align="left">status (PENDING/ACCEPTED)</td><td align="right"><font color="#718096">ENUM</font></td><td></td></tr>
+            <tr><td></td><td align="left">created_at</td><td align="right"><font color="#718096">DATETIME</font></td><td></td></tr>
+        </table>
+    >];
+
+    mentorship_relations [label=<
+        <table border="2" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#EBF8FF">
+            <tr><td bgcolor="#2B6CB0" colspan="4"><font color="white"><b>MENTORSHIP_RELATIONS (1:1 Active)</b></font></td></tr>
+            <tr><td port="id_w" width="1"></td><td align="left"><b>id</b> (PK)</td><td align="right"><font color="#718096">INT</font></td><td port="id_e" width="1"></td></tr>
+            <tr><td colspan="4" bgcolor="#90CDF4" height="1"></td></tr>
+            <tr><td port="app_w" width="1"></td><td align="left"><b>application_id</b> (FK, UNIQUE)</td><td align="right"><font color="#718096">INT</font></td><td port="app_e" width="1"></td></tr>
+            <tr><td></td><td align="left">mentee_id (FK &rarr; users.id)</td><td align="right"><font color="#718096">INT</font></td><td></td></tr>
+            <tr><td></td><td align="left">mentor_id (FK &rarr; users.id)</td><td align="right"><font color="#718096">INT</font></td><td></td></tr>
+            <tr><td></td><td align="left">start_date, end_date</td><td align="right"><font color="#718096">DATE</font></td><td></td></tr>
+            <tr><td></td><td align="left">status (ACTIVE/COMPLETED)</td><td align="right"><font color="#718096">ENUM</font></td><td></td></tr>
+            <tr><td colspan="4" align="center"><font color="#2B6CB0" point-size="8"><i>STRICT 1:1 WITH APPLICATION</i></font></td></tr>
+        </table>
+    >];
+
+    meetings [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FFFFFF">
+            <tr><td bgcolor="#1A365D" colspan="4"><font color="white"><b>MEETINGS</b></font></td></tr>
+            <tr><td port="id_w" width="1"></td><td align="left"><b>id</b> (PK)</td><td align="right"><font color="#718096">INT</font></td><td port="id_e" width="1"></td></tr>
+            <tr><td colspan="4" bgcolor="#CBD5E0" height="1"></td></tr>
+            <tr><td port="rel_w" width="1"></td><td align="left">relation_id (FK &rarr; relations.id)</td><td align="right"><font color="#718096">INT</font></td><td port="rel_e" width="1"></td></tr>
+            <tr><td></td><td align="left">scheduled_start, end</td><td align="right"><font color="#718096">DATETIME</font></td><td></td></tr>
+            <tr><td></td><td align="left">meeting_link</td><td align="right"><font color="#718096">VARCHAR(255)</font></td><td></td></tr>
+            <tr><td></td><td align="left">status</td><td align="right"><font color="#718096">ENUM</font></td><td></td></tr>
+        </table>
+    >];
+
+    meeting_notes [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FFFFFF">
+            <tr><td bgcolor="#1A365D" colspan="4"><font color="white"><b>MEETING_NOTES</b></font></td></tr>
+            <tr><td port="id_w" width="1"></td><td align="left"><b>id</b> (PK)</td><td align="right"><font color="#718096">INT</font></td><td port="id_e" width="1"></td></tr>
+            <tr><td colspan="4" bgcolor="#CBD5E0" height="1"></td></tr>
+            <tr><td port="mtg_w" width="1"></td><td align="left">meeting_id (FK &rarr; meetings.id)</td><td align="right"><font color="#718096">INT</font></td><td port="mtg_e" width="1"></td></tr>
+            <tr><td></td><td align="left">author_id (FK &rarr; users.id)</td><td align="right"><font color="#718096">INT</font></td><td></td></tr>
+            <tr><td></td><td align="left">summary</td><td align="right"><font color="#718096">VARCHAR(255)</font></td><td></td></tr>
+            <tr><td></td><td align="left">action_items</td><td align="right"><font color="#718096">TEXT</font></td><td></td></tr>
+            <tr><td></td><td align="left">created_at</td><td align="right"><font color="#718096">DATETIME</font></td><td></td></tr>
+        </table>
+    >];
+
+    reviews_and_ratings [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="4" bgcolor="#FFFFFF">
+            <tr><td bgcolor="#1A365D" colspan="4"><font color="white"><b>REVIEWS_AND_RATINGS</b></font></td></tr>
+            <tr><td port="id_w" width="1"></td><td align="left"><b>id</b> (PK)</td><td align="right"><font color="#718096">INT</font></td><td port="id_e" width="1"></td></tr>
+            <tr><td colspan="4" bgcolor="#CBD5E0" height="1"></td></tr>
+            <tr><td port="rel_w" width="1"></td><td align="left">relation_id (FK &rarr; relations.id)</td><td align="right"><font color="#718096">INT</font></td><td port="rel_e" width="1"></td></tr>
+            <tr><td></td><td align="left">reviewer_id (FK)</td><td align="right"><font color="#718096">INT</font></td><td></td></tr>
+            <tr><td></td><td align="left">reviewee_id (FK)</td><td align="right"><font color="#718096">INT</font></td><td></td></tr>
+            <tr><td></td><td align="left">rating (1-5)</td><td align="right"><font color="#718096">TINYINT</font></td><td></td></tr>
+            <tr><td></td><td align="left">review_text</td><td align="right"><font color="#718096">TEXT</font></td><td></td></tr>
+            <tr><td colspan="4" align="center"><font color="#718096" point-size="8"><i>UNIQUE(relation, reviewer, reviewee)</i></font></td></tr>
+        </table>
+    >];
+
+    legend [label=<
+        <table border="1" cellborder="0" cellspacing="0" cellpadding="5" bgcolor="#F7FAFC">
+            <tr><td bgcolor="#4A5568" colspan="2"><font color="white"><b>CROW'S FOOT CARDINALITY NOTATION</b></font></td></tr>
+            <tr><td align="left"><b>|| &mdash;&mdash;&mdash;&mdash;&lt;</b></td><td align="left"><b>1 : N (One-to-Many)</b> &bull; Double-bar = exactly 1; Crow's foot = many</td></tr>
+            <tr><td align="left"><b>|| &mdash;&mdash;&mdash;&mdash; ||</b></td><td align="left"><b>1 : 1 (One-to-One)</b> &bull; Double-bar on both ends (UNIQUE FK)</td></tr>
+            <tr><td align="left"><b>o| &mdash;&mdash;&mdash;&mdash;&lt;</b></td><td align="left"><b>0..1 : N (Optional)</b> &bull; Circle = optional (nullable FK)</td></tr>
+            <tr><td bgcolor="#FEFCBF" align="center"><b>Yellow Table</b></td><td align="left"><b>M:N Associative Junction Table</b> (Resolves Users &harr; Skills)</td></tr>
+        </table>
+    >];
+
+    // ==========================================
+    // ROW CONNECTIONS:
+    // Notice:
+    // - On users.id row: LEFT side (:w) connects to user_skills on left.
+    // - On users.id row: RIGHT side (:e) connects to tables on right!
+    // - On user_skills: receives from left (skills) AND from right (users)!
+    // ==========================================
+
+    // 1. LEFT SIDE OF users.id ROW -> user_skills
+    users:id_w:w -> user_skills:uid_e:e [dir=both, arrowtail=teetee, arrowhead=crow, color="#D69E2E", penwidth=1.6];
+    skills:id_e:e -> user_skills:sid_w:w [dir=both, arrowtail=teetee, arrowhead=crow, color="#D69E2E", penwidth=1.6];
+
+    // 2. RIGHT SIDE OF users.id ROW -> tables to the right
+    users:id_e:e -> mentor_availability:mid_w:w [dir=both, arrowtail=teetee, arrowhead=crow, color="#4A5568"];
+    users:id_e:e -> mentorship_goals:mid_w:w [dir=both, arrowtail=teetee, arrowhead=crow, color="#4A5568"];
+    users:id_e:e -> notifications:uid_w:w [dir=both, arrowtail=teetee, arrowhead=crow, color="#4A5568"];
+    users:id_e:e -> mentorship_applications:mentee_w:w [dir=both, arrowtail=teetee, arrowhead=crow, color="#718096"];
+    users:id_e:e -> mentorship_applications:mentor_w:w [dir=both, arrowtail=teetee, arrowhead=crow, color="#718096"];
+
+    // 3. Goals to Applications
+    mentorship_goals:id_e:e -> mentorship_applications:goal_w:w [dir=both, arrowtail=odottee, arrowhead=crow, style=dashed, color="#4A5568"];
+
+    // 4. Applications to Relations (STRICT 1:1)
+    mentorship_applications:id_e:e -> mentorship_relations:app_w:w [
+        dir=both,
+        arrowtail=teetee,
+        arrowhead=teetee,
+        color="#2B6CB0",
+        penwidth=2.5
+    ];
+
+    // 5. Relations to Meetings & Reviews
+    mentorship_relations:id_e:e -> meetings:rel_w:w [dir=both, arrowtail=teetee, arrowhead=crow, color="#2B6CB0"];
+    mentorship_relations:id_e:e -> reviews_and_ratings:rel_w:w [dir=both, arrowtail=teetee, arrowhead=crow, color="#2B6CB0"];
+
+    // 6. Meetings to Notes
+    meetings:id_e:e -> meeting_notes:mtg_w:w [dir=both, arrowtail=teetee, arrowhead=crow, color="#4A5568"];
+}

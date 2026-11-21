@@ -1,0 +1,112 @@
+// =====================================================================
+// Mentor-Mentee Matching Platform (ITU BBF 302E Milestone 2)
+// DBML (Database Markup Language) — Paste into https://dbdiagram.io
+// =====================================================================
+
+Table users {
+  id int [pk, increment]
+  email varchar(150) [unique, not null]
+  password_hash varchar(255) [not null]
+  first_name varchar(60) [not null]
+  last_name varchar(60) [not null]
+  role varchar(20) [not null, note: 'MENTEE, MENTOR, ADMIN']
+  current_title varchar(100)
+  organization varchar(100)
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table skills {
+  id int [pk, increment]
+  name varchar(80) [unique, not null]
+  category varchar(60) [not null]
+  description text
+}
+
+// Associative table resolving M:N between users and skills
+Table user_skills {
+  id int [pk, increment]
+  user_id int [not null, ref: > users.id]
+  skill_id int [not null, ref: > skills.id]
+  proficiency varchar(20) [not null, note: 'BEGINNER, INTERMEDIATE, ADVANCED, EXPERT']
+  years_of_experience int [default: 0]
+  indexes {
+    (user_id, skill_id) [unique]
+  }
+}
+
+Table mentorship_goals {
+  id int [pk, increment]
+  mentee_id int [not null, ref: > users.id]
+  title varchar(120) [not null]
+  target_completion_date date [not null]
+  status varchar(20) [not null, default: 'ACTIVE', note: 'ACTIVE, COMPLETED, CANCELLED']
+}
+
+Table mentorship_applications {
+  id int [pk, increment]
+  mentee_id int [not null, ref: > users.id]
+  mentor_id int [not null, ref: > users.id]
+  goal_id int [ref: > mentorship_goals.id]
+  message text [not null]
+  status varchar(20) [not null, default: 'PENDING', note: 'PENDING, ACCEPTED, REJECTED, CANCELLED']
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+// Strict 1:1 relationship with application_id UNIQUE
+Table mentorship_relations {
+  id int [pk, increment]
+  application_id int [unique, not null, ref: - mentorship_applications.id]
+  mentee_id int [not null, ref: > users.id]
+  mentor_id int [not null, ref: > users.id]
+  start_date date [not null]
+  end_date date
+  status varchar(20) [not null, default: 'ACTIVE', note: 'ACTIVE, COMPLETED, TERMINATED']
+}
+
+Table mentor_availability {
+  id int [pk, increment]
+  mentor_id int [not null, ref: > users.id]
+  day_of_week int [not null, note: '1=Mon .. 7=Sun']
+  start_time time [not null]
+  end_time time [not null]
+  is_active boolean [default: true]
+}
+
+Table meetings {
+  id int [pk, increment]
+  relation_id int [not null, ref: > mentorship_relations.id]
+  scheduled_start datetime [not null]
+  scheduled_end datetime [not null]
+  meeting_link varchar(255)
+  status varchar(20) [not null, default: 'SCHEDULED', note: 'SCHEDULED, COMPLETED, CANCELLED']
+}
+
+Table meeting_notes {
+  id int [pk, increment]
+  meeting_id int [not null, ref: > meetings.id]
+  author_id int [not null, ref: > users.id]
+  summary varchar(255) [not null]
+  action_items text
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
+
+Table reviews_and_ratings {
+  id int [pk, increment]
+  relation_id int [not null, ref: > mentorship_relations.id]
+  reviewer_id int [not null, ref: > users.id]
+  reviewee_id int [not null, ref: > users.id]
+  rating int [not null, note: '1-5 scale']
+  review_text text
+  indexes {
+    (relation_id, reviewer_id, reviewee_id) [unique]
+  }
+}
+
+Table notifications {
+  id int [pk, increment]
+  user_id int [not null, ref: > users.id]
+  title varchar(120) [not null]
+  message text [not null]
+  is_read boolean [default: false]
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+}
