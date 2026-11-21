@@ -35,6 +35,7 @@ def create_app(config_class=Config):
     def inject_global_data():
         current_u = None
         unread_notifs = 0
+        recent_notifs = []
         try:
             current_u = get_current_user()
             if current_u:
@@ -44,11 +45,16 @@ def create_app(config_class=Config):
                 )
                 if count_res:
                     unread_notifs = count_res['cnt']
+                recent_notifs = db.fetch_all(
+                    "SELECT id, title, message, is_read, created_at FROM notifications WHERE user_id = %s ORDER BY created_at DESC LIMIT 5",
+                    (current_u['id'],)
+                )
         except Exception:
             pass
         return {
             'current_user': current_u,
-            'unread_notifications_count': unread_notifs
+            'unread_notifications_count': unread_notifs,
+            'recent_notifications': recent_notifs
         }
 
     # Custom error handler for database connection failures

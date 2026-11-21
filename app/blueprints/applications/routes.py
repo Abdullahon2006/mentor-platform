@@ -1,8 +1,10 @@
 from datetime import date
 from flask import render_template, request, redirect, url_for, flash
 from app.blueprints.applications import applications_bp
-from app.db import fetch_one, fetch_all, execute_query
+from app.db import fetch_one, fetch_all, execute_query, get_db
 from app.auth_util import login_required, role_required, get_current_user
+
+MENTOR_CAPACITY = 5
 
 @applications_bp.route('/mentors')
 def browse_mentors():
@@ -11,7 +13,7 @@ def browse_mentors():
     search_query = request.args.get('q', '').strip()
 
     base_sql = """
-        SELECT 
+        SELECT
             m.id, m.first_name, m.last_name, m.current_title, m.organization, m.bio,
             COALESCE(r.avg_rating, 0.0) AS avg_rating,
             COALESCE(r.total_reviews, 0) AS total_reviews,
@@ -24,7 +26,7 @@ def browse_mentors():
         ) r ON m.id = r.reviewee_id
         LEFT JOIN mentorship_relations rel ON m.id = rel.mentor_id AND rel.status = 'ACTIVE'
     """
-    
+
     where_clauses = ["m.role = 'MENTOR'"]
     params = []
 
@@ -54,7 +56,7 @@ def mentor_detail(mentor_id):
     """View mentor profile details, their skills, availability slots, and reviews."""
     mentor_sql = """
         SELECT id, first_name, last_name, current_title, organization, bio, created_at
-        FROM users 
+        FROM users
         WHERE id = %s AND role = 'MENTOR'
     """
     mentor = fetch_one(mentor_sql, (mentor_id,))
@@ -120,7 +122,7 @@ def manage_goals():
 
     if request.method == 'POST':
         action = request.form.get('action')
-        
+
         if action == 'create':
             title = request.form.get('title', '').strip()
             description = request.form.get('description', '').strip()
@@ -135,7 +137,27 @@ def manage_goals():
                 """
                 execute_query(insert_sql, (user_id, title, description, target_date))
                 flash("Goal created successfully!", "success")
-        
+
+        elif action == 'edit':
+            goal_id = request.form.get('goal_id')
+            title = request.form.get('title', '').strip()
+            description = request.form.get('description', '').strip()
+            target_date = request.form.get('target_date') or None
+
+            if not title:
+                flash("Goal title is required.", "danger")
+            else:
+                update_sql = """
+                    UPDATE mentorship_goals 
+                    SET title = %s, description = %s, target_completion_date = %s
+                    WHERE id = %s AND mentee_id = %s
+                """
+                _, changed = execute_query(update_sql, (title, description, target_date, goal_id, user_id))
+                if changed:
+                    flash("Goal updated successfully!", "success")
+                else:
+                    flash("Goal not found or no changes made.", "info")
+
         elif action == 'update_status':
             goal_id = request.form.get('goal_id')
             new_status = request.form.get('status')
@@ -154,23 +176,25 @@ def manage_goals():
 
     # Complex Query 3: Mentee Goal Progress & Activity Correlation
     goals_sql = """
-        SELECT 
-            g.id, g.title, g.description, g.target_completion_date, g.status, g.created_at,
+        SELECT
+            g.id, g.title, g.description, g.target_completion_date,
+            DATEDIFF(g.target_completion_date, CURRENT_DATE) AS days_until_target,
+            g.status, g.created_at,
             COALESCE(CONCAT(m.first_name, ' ', m.last_name), 'No Mentor Assigned') AS assigned_mentor,
             m.id AS mentor_id,
             COUNT(DISTINCT mt.id) AS total_completed_sessions,
             MAX(mt.scheduled_start) AS latest_session_date
         FROM mentorship_goals g
-        LEFT JOIN mentorship_applications ma 
+        LEFT JOIN mentorship_applications ma
             ON g.id = ma.goal_id AND ma.status = 'ACCEPTED'
-        LEFT JOIN mentorship_relations mr 
+        LEFT JOIN mentorship_relations mr
             ON ma.id = mr.application_id
-        LEFT JOIN users m 
+        LEFT JOIN users m
             ON mr.mentor_id = m.id
-        LEFT JOIN meetings mt 
+        LEFT JOIN meetings mt
             ON mr.id = mt.relation_id AND mt.status = 'COMPLETED'
         WHERE g.mentee_id = %s
-        GROUP BY 
+        GROUP BY
             g.id, g.title, g.description, g.target_completion_date, g.status, g.created_at,
             m.id, m.first_name, m.last_name
         ORDER BY g.created_at DESC
@@ -293,32 +317,59 @@ def decide_application(app_id):
         flash("This application has already been processed.", "warning")
         return redirect(url_for('applications.list_applications'))
 
-    # Update application status
-    update_sql = """
-        UPDATE mentorship_applications 
-        SET status = %s, decided_at = NOW()
-        WHERE id = %s
-    """
-    execute_query(update_sql, (decision, app_id))
-
     mentee_id = application['mentee_id']
 
-    if decision == 'ACCEPTED':
-        # Create active mentorship relationship in mentorship_relations (Member 4 table)
-        rel_sql = """
-            INSERT INTO mentorship_relations (application_id, mentee_id, mentor_id, start_date, status)
-            VALUES (%s, %s, %s, %s, 'ACTIVE')
-        """
-        execute_query(rel_sql, (app_id, mentee_id, mentor_id, date.today()))
+    # Lock mentor row and execute atomic transaction
+    conn = get_db()
+    conn.commit()  # clear stale snapshot
+    try:
+        fetch_one("SELECT id FROM users WHERE id = %s FOR UPDATE", (mentor_id,))
 
-        # Send notification to mentee
-        notif_msg = f"{user['first_name']} {user['last_name']} accepted your mentorship application! You can now schedule meetings."
-        execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)", (mentee_id, "Application Accepted!", notif_msg))
-        flash("Application accepted! An active mentorship relationship has been established.", "success")
-    else:
-        notif_msg = f"{user['first_name']} {user['last_name']} was unable to accept your application at this time."
-        execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)", (mentee_id, "Application Update", notif_msg))
-        flash("Application declined.", "info")
+        # Task 1: Check mentor capacity (max 5 active mentees) before accepting
+        if decision == 'ACCEPTED':
+            active = fetch_one(
+                "SELECT COUNT(*) AS cnt FROM mentorship_relations WHERE mentor_id = %s AND status = 'ACTIVE'",
+                (mentor_id,)
+            )['cnt']
+            if active >= MENTOR_CAPACITY:
+                conn.rollback()
+                flash(f"You already have {MENTOR_CAPACITY} active mentees.", "warning")
+                return redirect(url_for('applications.list_applications'))
+
+        # Task 2: Atomic transaction with double-click guard
+        _, changed = execute_query(
+            "UPDATE mentorship_applications SET status = %s, decided_at = NOW() WHERE id = %s AND status = 'PENDING'",
+            (decision, app_id),
+            commit=False
+        )
+        if not changed:
+            conn.rollback()
+            flash("This application has already been processed.", "warning")
+            return redirect(url_for('applications.list_applications'))
+
+        if decision == 'ACCEPTED':
+            # Create active mentorship relationship in mentorship_relations (Member 4 table)
+            rel_sql = """
+                INSERT INTO mentorship_relations (application_id, mentee_id, mentor_id, start_date, status)
+                VALUES (%s, %s, %s, %s, 'ACTIVE')
+            """
+            execute_query(rel_sql, (app_id, mentee_id, mentor_id, date.today()), commit=False)
+
+            # Send notification to mentee
+            notif_msg = f"{user['first_name']} {user['last_name']} accepted your mentorship application! You can now schedule meetings."
+            execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)",
+                          (mentee_id, "Application Accepted!", notif_msg), commit=False)
+            flash("Application accepted! An active mentorship relationship has been established.", "success")
+        else:
+            notif_msg = f"{user['first_name']} {user['last_name']} was unable to accept your application at this time."
+            execute_query("INSERT INTO notifications (user_id, title, message) VALUES (%s, %s, %s)",
+                          (mentee_id, "Application Update", notif_msg), commit=False)
+            flash("Application declined.", "info")
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
 
     return redirect(url_for('applications.list_applications'))
 

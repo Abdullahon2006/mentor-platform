@@ -39,3 +39,9 @@ wheels/
 *.db
 *.sqlite3
 .DS_Store
+
+# Local reference docs & screenshots (not official project deliverables)
+docs/mentor_mentee_platform_plan.md
+docs/walkthrough.md
+docs/screenshots/
+

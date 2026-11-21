@@ -7,6 +7,7 @@ Every test cleans up the rows it creates, so the suite can be run against the
 shared demo/MySQL database without leaving test data behind.
 """
 import re
+import threading
 from datetime import date, datetime, timedelta
 
 import pytest
@@ -22,6 +23,7 @@ PASSWORD = 'password123'
 MENTEE = 'ali.yilmaz@itu.edu.tr'     # Ali Yilmaz
 MENTOR = 'dr.demir@techcorp.com'     # Ahmet Demir, Ali's mentor
 OUTSIDER = 'selin.kaya@ailabs.org'   # Selin Kaya, not part of Ali's mentorship
+SECOND_MENTEE = 'ayse.can@itu.edu.tr'  # Ayse Can, temporarily given Ahmet as a second mentor
 
 
 # ---------------------------------------------------------------------
@@ -172,6 +174,69 @@ def test_outsider_cannot_book(app, ids):
     client = login(app, OUTSIDER)
     response = client.get(f"/relations/{ids['relation']}/meetings/book", follow_redirects=True)
     assert b'Unauthorized' in response.data
+
+
+@pytest.fixture
+def second_relation(app, ids):
+    """A temporary second ACTIVE mentorship for the same mentor (Ayse -> Ahmet), removed afterwards."""
+    with app.app_context():
+        mentee2 = fetch_one("SELECT id FROM users WHERE email = %s", (SECOND_MENTEE,))['id']
+        app_id, _ = execute_query(
+            "INSERT INTO mentorship_applications (mentee_id, mentor_id, message, status) "
+            "VALUES (%s, %s, %s, 'ACCEPTED')",
+            (mentee2, ids['mentor'], MARK)
+        )
+        relation_id, _ = execute_query(
+            "INSERT INTO mentorship_relations (application_id, mentee_id, mentor_id, start_date, status) "
+            "VALUES (%s, %s, %s, %s, 'ACTIVE')",
+            (app_id, mentee2, ids['mentor'], date.today())
+        )
+    yield relation_id
+    with app.app_context():
+        execute_query("DELETE FROM meetings WHERE relation_id = %s", (relation_id,))
+        execute_query("DELETE FROM mentorship_relations WHERE id = %s", (relation_id,))
+        execute_query("DELETE FROM mentorship_applications WHERE id = %s", (app_id,))
+
+
+def test_concurrent_booking_of_same_slot_only_one_succeeds(app, ids, second_relation):
+    """
+    NFR-05: two mentees of the same mentor submit the same slot at the same moment.
+    The SELECT ... FOR UPDATE lock on the mentor row must let exactly one booking through.
+    """
+    ali = login(app, MENTEE)
+    ayse = login(app, SECOND_MENTEE)
+    slot = free_slots(ali, ids['relation'])[0]
+    assert slot in free_slots(ayse, second_relation)  # same mentor, so the same slot is offered to both
+
+    start_together = threading.Barrier(2)
+    results = {}
+
+    def attempt(name, client, relation_id):
+        start_together.wait()  # release both requests at the same instant
+        results[name] = book(client, relation_id, slot, agenda=f'{MARK} {name}').get_data(as_text=True)
+
+    threads = [threading.Thread(target=attempt, args=('ali', ali, ids['relation'])),
+               threading.Thread(target=attempt, args=('ayse', ayse, second_relation))]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join(timeout=30)
+
+    succeeded = [n for n, html in results.items() if 'Meeting successfully scheduled!' in html]
+    refused = [n for n, html in results.items() if 'already booked' in html]
+    assert len(succeeded) == 1, results.keys()
+    assert len(refused) == 1
+
+    window_id, day = slot.split('|')
+    with app.app_context():
+        window = fetch_one("SELECT start_time FROM mentor_availability WHERE id = %s", (window_id,))
+        start_dt = datetime.combine(date.fromisoformat(day), _to_time(window['start_time']))
+        booked = fetch_one(
+            "SELECT COUNT(*) AS n FROM meetings m JOIN mentorship_relations mr ON m.relation_id = mr.id "
+            "WHERE mr.mentor_id = %s AND m.status = 'SCHEDULED' AND m.scheduled_start = %s",
+            (ids['mentor'], start_dt)
+        )['n']
+    assert booked == 1
 
 
 # ---------------------------------------------------------------------

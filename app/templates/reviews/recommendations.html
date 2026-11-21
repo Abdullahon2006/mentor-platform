@@ -18,6 +18,54 @@
         </div>
     </div>
 
+
+    <!-- Mentor Recommendation Category Filter -->
+    <div class="col-12">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <form method="GET"
+                      action="{{ url_for('skills.mentor_recommendations') }}"
+                      class="row g-3 align-items-end">
+
+                    <div class="col-md-8">
+                        <label for="category" class="form-label fw-semibold">
+                            Filter Mentors by Skill Category
+                        </label>
+
+                        <select id="category"
+                                name="category"
+                                class="form-select">
+
+                            <option value="">All Categories</option>
+
+                            {% for c in categories %}
+                            <option value="{{ c.category }}"
+                                {% if selected_category == c.category %}
+                                selected
+                                {% endif %}>
+                                {{ c.category }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-funnel"></i> Filter
+                        </button>
+
+                        <a href="{{ url_for('skills.mentor_recommendations') }}"
+                           class="btn btn-outline-secondary">
+                            Clear
+                        </a>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+
+
     <div class="col-12">
         {% if recommendations %}
         <div class="row g-4">
@@ -64,7 +112,18 @@
         <div class="card p-5 text-center text-muted">
             <i class="bi bi-lightning-charge fs-1 mb-2 d-block text-warning"></i>
             <h5>No recommendations yet</h5>
-            <p class="small">Add skills to your profile to allow the recommendation engine to calculate compatibility scores.</p>
+            {% if selected_category %}
+            <p class="small">
+                No available mentors match your skills in the
+                "{{ selected_category }}" category.
+                Try selecting another category or clearing the filter.
+            </p>
+            {% else %}
+            <p class="small">
+                No matching mentors are currently available.
+                Try updating your profile skills or checking again later.
+            </p>
+            {% endif %}
             <div>
                 <a href="{{ url_for('skills.manage_user_skills') }}" class="btn btn-primary btn-sm">Add Profile Skills</a>
             </div>

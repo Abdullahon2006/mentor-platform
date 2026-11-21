@@ -40,6 +40,11 @@ def _init_mysql_pool():
         _mode = 'MYSQL'
         print(f"[DATABASE] Connected to MySQL 8.0 at {Config.DB_HOST}:{Config.DB_PORT} ({Config.DB_NAME})")
     except Exception as err:
+        if os.environ.get('REQUIRE_MYSQL', '').lower() in ('1', 'true', 'yes'):
+            raise RuntimeError(
+                f"[DATABASE ERROR] REQUIRE_MYSQL is enabled, but could not connect to MySQL 8.0 "
+                f"at {Config.DB_HOST}:{Config.DB_PORT} ({err}). Please ensure MySQL is running."
+            )
         _pool = None
         _mode = 'DEMO_SQLITE'
         print(f"[DATABASE NOTICE] MySQL not running at {Config.DB_HOST}:{Config.DB_PORT} ({err}).")
@@ -86,12 +91,26 @@ def _adapt_sql_for_sqlite(sql):
     # Replace CONCAT(a, ' ', b) with (a || ' ' || b)
     adapted = re.sub(r"CONCAT\(([^,]+),\s*([^,]+),\s*([^)]+)\)", r"(\1 || \2 || \3)", adapted)
     adapted = re.sub(r"CONCAT\(([^,]+),\s*([^)]+)\)", r"(\1 || \2)", adapted)
-    # Replace NOW() with datetime('now')
-    adapted = re.sub(r"\bNOW\(\)", "datetime('now')", adapted, flags=re.IGNORECASE)
     # Replace DATE_ADD(NOW(), INTERVAL x DAY) with datetime('now', '+x days')
     adapted = re.sub(
         r"DATE_ADD\s*\(\s*(?:NOW\(\)|CURRENT_TIMESTAMP)\s*,\s*INTERVAL\s+(\d+)\s+DAY\s*\)",
         r"datetime('now', '+\1 days')",
+        adapted,
+        flags=re.IGNORECASE
+    )
+    # Replace NOW() with datetime('now') (after DATE_ADD, which matches NOW() itself)
+    adapted = re.sub(r"\bNOW\(\)", "datetime('now')", adapted, flags=re.IGNORECASE)
+    # TIME_TO_SEC(TIMEDIFF(end, start)) -> seconds between two TIME columns (float, like MySQL)
+    adapted = re.sub(
+        r"TIME_TO_SEC\(\s*TIMEDIFF\(\s*([\w.]+)\s*,\s*([\w.]+)\s*\)\s*\)",
+        r"((strftime('%s', '2000-01-01 ' || \1) - strftime('%s', '2000-01-01 ' || \2)) * 1.0)",
+        adapted,
+        flags=re.IGNORECASE
+    )
+    # TIMESTAMPDIFF(MINUTE, a, b) -> whole minutes between two DATETIME values
+    adapted = re.sub(
+        r"TIMESTAMPDIFF\(\s*MINUTE\s*,\s*([\w.]+)\s*,\s*([\w.]+)\s*\)",
+        r"CAST(ROUND((julianday(\2) - julianday(\1)) * 1440) AS INTEGER)",
         adapted,
         flags=re.IGNORECASE
     )
@@ -106,13 +125,13 @@ def _adapt_sql_for_sqlite(sql):
     if "ON DUPLICATE KEY UPDATE" in adapted:
         if "user_skills" in adapted:
             adapted = re.sub(
-                r"ON DUPLICATE KEY UPDATE.*",
+                r"ON DUPLICATE KEY UPDATE[\s\S]*",
                 "ON CONFLICT(user_id, skill_id) DO UPDATE SET proficiency=excluded.proficiency, years_of_experience=excluded.years_of_experience",
                 adapted, flags=re.IGNORECASE
             )
         elif "reviews_and_ratings" in adapted:
             adapted = re.sub(
-                r"ON DUPLICATE KEY UPDATE.*",
+                r"ON DUPLICATE KEY UPDATE[\s\S]*",
                 "ON CONFLICT(relation_id, reviewer_id, reviewee_id) DO UPDATE SET rating=excluded.rating, review_text=excluded.review_text",
                 adapted, flags=re.IGNORECASE
             )
@@ -122,7 +141,7 @@ def execute_query(sql, params=None, commit=True):
     """Executes a raw SQL statement (INSERT, UPDATE, DELETE)."""
     conn = get_db()
     mode = getattr(g, 'db_mode', 'MYSQL')
-    
+
     if mode == 'MYSQL':
         cursor = conn.cursor(dictionary=True)
         try:
@@ -167,6 +186,13 @@ def fetch_one(sql, params=None):
             cursor.close()
     else:
         adapted_sql = _adapt_sql_for_sqlite(sql)
+        # SQLite has no row locks and no SELECT ... FOR UPDATE. The closest equivalent is
+        # BEGIN IMMEDIATE, which takes the database write lock until commit/rollback, so
+        # concurrent "lock, check, insert" sequences still run one after another.
+        if re.search(r'\bFOR\s+UPDATE\b', adapted_sql, flags=re.IGNORECASE):
+            adapted_sql = re.sub(r'\s*\bFOR\s+UPDATE\b', '', adapted_sql, flags=re.IGNORECASE)
+            if not conn.in_transaction:
+                conn.execute('BEGIN IMMEDIATE')
         cursor = conn.cursor()
         try:
             cursor.execute(adapted_sql, params or ())

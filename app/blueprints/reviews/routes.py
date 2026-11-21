@@ -46,6 +46,9 @@ def submit_review(relation_id):
         """
         INSERT INTO reviews_and_ratings (relation_id, reviewer_id, reviewee_id, rating, review_text)
         VALUES (%s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            rating = VALUES(rating),
+            review_text = VALUES(review_text)
         """,
         (relation_id, user_id, reviewee_id, rating_val, review_text)
     )
@@ -156,50 +159,7 @@ def leaderboard():
 @reviews_bp.route('/recommendations')
 @role_required('MENTEE')
 def mentor_recommendations():
-    """
-    COMPLEX QUERY 1: Multi-Criteria Mentor Recommendation Engine
-    Recommends mentors matching current mentee's declared skills and goals.
-    """
-    user = get_current_user()
-    mentee_id = user['id']
-
-    complex_sql = """
-        SELECT 
-            m.id AS mentor_id,
-            CONCAT(m.first_name, ' ', m.last_name) AS mentor_name,
-            m.current_title,
-            m.organization,
-            COUNT(DISTINCT us.skill_id) AS matched_skills_count,
-            ROUND(AVG(CASE 
-                WHEN us.proficiency = 'EXPERT' THEN 4
-                WHEN us.proficiency = 'ADVANCED' THEN 3
-                WHEN us.proficiency = 'INTERMEDIATE' THEN 2
-                ELSE 1 END), 2) AS avg_skill_score,
-            COALESCE(r.avg_rating, 0.0) AS mentor_rating,
-            COUNT(DISTINCT rel.id) AS active_mentees_count
-        FROM users m
-        JOIN user_skills us ON m.id = us.user_id
-        LEFT JOIN (
-            SELECT reviewee_id, ROUND(AVG(rating), 2) AS avg_rating
-            FROM reviews_and_ratings
-            GROUP BY reviewee_id
-        ) r ON m.id = r.reviewee_id
-        LEFT JOIN mentorship_relations rel ON m.id = rel.mentor_id AND rel.status = 'ACTIVE'
-        WHERE m.role = 'MENTOR'
-          AND us.skill_id IN (
-              SELECT skill_id FROM user_skills WHERE user_id = %s
-          )
-          AND m.id NOT IN (
-              SELECT mentor_id FROM mentorship_relations 
-              WHERE status = 'ACTIVE' 
-              GROUP BY mentor_id HAVING COUNT(*) >= 5
-          )
-        GROUP BY m.id, m.first_name, m.last_name, m.current_title, m.organization, r.avg_rating
-        HAVING matched_skills_count >= 1
-        ORDER BY matched_skills_count DESC, avg_skill_score DESC, mentor_rating DESC
-    """
-    recommendations = fetch_all(complex_sql, (mentee_id,))
-    return render_template('reviews/recommendations.html', recommendations=recommendations)
+    return redirect(url_for('skills.mentor_recommendations'))
 
 @reviews_bp.route('/analytics/goals')
 @role_required('MENTEE')
@@ -212,11 +172,12 @@ def goal_analytics():
     mentee_id = user['id']
 
     complex_sql = """
-        SELECT 
+        SELECT
             g.id AS goal_id,
             g.title AS goal_title,
             g.status AS goal_status,
             g.target_completion_date,
+            DATEDIFF(g.target_completion_date, CURRENT_DATE) AS days_until_target,
             COALESCE(CONCAT(mentor.first_name, ' ', mentor.last_name), 'No Mentor Yet') AS assigned_mentor,
             COUNT(DISTINCT mt.id) AS total_completed_sessions,
             MAX(mt.scheduled_start) AS latest_session_date
