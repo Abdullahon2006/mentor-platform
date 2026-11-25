@@ -1,0 +1,392 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3300" height="2100" viewBox="0 0 3300 2100">
+
+  <defs>
+    <style>
+      .title { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 34px; font-weight: 700; fill: #1A202C; }
+      .subtitle { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 18px; font-weight: 400; fill: #4A5568; }
+      .entity-text { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 19px; font-weight: 700; fill: #1A202C; text-anchor: middle; dominant-baseline: central; }
+      .diamond-text { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 16px; font-weight: 700; fill: #1A202C; text-anchor: middle; dominant-baseline: central; }
+      .attr-text { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 15px; font-weight: 500; fill: #1A202C; text-anchor: middle; dominant-baseline: central; }
+      .attr-pk { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 15px; font-weight: 700; fill: #1A202C; text-anchor: middle; dominant-baseline: central; text-decoration: underline; }
+      .card-label { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 17px; font-weight: 700; fill: #1E3A8A; text-anchor: middle; dominant-baseline: central; }
+      .role-label { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 13px; font-style: italic; font-weight: 600; fill: #475569; text-anchor: middle; dominant-baseline: central; }
+      .legend-title { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 17px; font-weight: 700; fill: #1A202C; }
+      .legend-text { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 14px; font-weight: 500; fill: #2D3748; }
+    </style>
+    <marker id="arrow-thin" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="11" markerHeight="11" orient="auto">
+      <path d="M 1 1.5 L 11 6 L 1 10.5 z" fill="#1E293B"/>
+    </marker>
+    <marker id="arrow-bold" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="7.5" markerHeight="7.5" orient="auto">
+      <path d="M 0 1 L 11 6 L 0 11 z" fill="#1E293B"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="3300" height="2100" fill="#FFFFFF"/>
+
+  <text x="60" y="62" class="title">Mentor–Mentee Matching Platform — Conceptual ER Diagram (Chen Notation)</text>
+  <text x="60" y="94" class="subtitle">BBF 302E Database Systems · Team Black Swan · Notation: ITU BLG 317E / BBF 302E Week 8 (Rectangles = Entities, Diamonds = Relationships, Ellipses = Attributes, Underlined = Key)</text>
+  <line x1="60" y1="114" x2="3240" y2="114" stroke="#CBD5E1" stroke-width="1.5"/>
+  <!-- Attribute connector lines -->
+  <line x1="975.0" y1="924.5" x2="655.9" y2="828.8" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1007.3" y1="914.0" x2="789.8" y2="765.3" stroke="#475569" stroke-width="1.6"/>
+  <line x1="975.0" y1="942.9" x2="606.8" y2="912.2" stroke="#475569" stroke-width="1.6"/>
+  <line x1="975.0" y1="931.4" x2="802.5" y2="893.7" stroke="#475569" stroke-width="1.6"/>
+  <line x1="975.0" y1="957.1" x2="588.0" y2="989.3" stroke="#475569" stroke-width="1.6"/>
+  <line x1="975.0" y1="956.6" x2="795.1" y2="970.7" stroke="#475569" stroke-width="1.6"/>
+  <line x1="975.0" y1="971.9" x2="583.0" y2="1072.7" stroke="#475569" stroke-width="1.6"/>
+  <line x1="975.0" y1="982.7" x2="786.5" y2="1055.2" stroke="#475569" stroke-width="1.6"/>
+  <line x1="975.7" y1="986.0" x2="627.0" y2="1134.9" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1010.2" y1="986.0" x2="765.4" y2="1163.0" stroke="#475569" stroke-width="1.6"/>
+  <line x1="333.5" y1="356.0" x2="203.3" y2="260.7" stroke="#475569" stroke-width="1.6"/>
+  <line x1="375.5" y1="356.0" x2="358.2" y2="224.0" stroke="#475569" stroke-width="1.6"/>
+  <line x1="416.1" y1="356.0" x2="531.6" y2="247.1" stroke="#475569" stroke-width="1.6"/>
+  <line x1="280.0" y1="390.0" x2="215.0" y2="390.0" stroke="#475569" stroke-width="1.6"/>
+  <line x1="334.2" y1="424.0" x2="234.7" y2="497.9" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1000.8" y1="306.0" x2="858.5" y2="224.2" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1042.0" y1="306.0" x2="982.6" y2="193.7" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1078.0" y1="306.0" x2="1137.5" y2="193.7" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1119.2" y1="306.0" x2="1259.9" y2="225.2" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1180.0" y1="327.5" x2="1233.0" y2="322.0" stroke="#475569" stroke-width="1.6"/>
+  <line x1="315.1" y1="1586.0" x2="205.5" y2="1528.6" stroke="#475569" stroke-width="1.6"/>
+  <line x1="300.0" y1="1627.3" x2="214.8" y2="1635.0" stroke="#475569" stroke-width="1.6"/>
+  <line x1="351.5" y1="1654.0" x2="269.2" y2="1752.1" stroke="#475569" stroke-width="1.6"/>
+  <line x1="400.6" y1="1654.0" x2="465.7" y2="1761.4" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1758.3" y1="306.0" x2="1609.4" y2="223.9" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1803.0" y1="306.0" x2="1746.7" y2="193.5" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1840.0" y1="306.0" x2="1906.1" y2="193.6" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1909.2" y1="306.0" x2="2077.7" y2="241.8" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1932.5" y1="336.3" x2="2069.2" y2="331.8" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1914.8" y1="374.0" x2="2034.8" y2="417.0" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1754.4" y1="784.0" x2="1599.5" y2="698.9" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1862.4" y1="784.0" x2="1994.5" y2="671.7" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1939.4" y1="784.0" x2="2089.2" y2="738.8" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1759.2" y1="856.0" x2="1610.8" y2="943.8" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1898.3" y1="856.0" x2="2027.0" y2="915.2" stroke="#475569" stroke-width="1.6"/>
+  <line x1="2622.9" y1="784.0" x2="2507.6" y2="672.0" stroke="#475569" stroke-width="1.6"/>
+  <line x1="2661.8" y1="784.0" x2="2668.8" y2="644.0" stroke="#475569" stroke-width="1.6"/>
+  <line x1="2702.4" y1="784.0" x2="2834.1" y2="672.0" stroke="#475569" stroke-width="1.6"/>
+  <line x1="2785.0" y1="795.9" x2="2893.9" y2="774.9" stroke="#475569" stroke-width="1.6"/>
+  <line x1="2785.0" y1="846.8" x2="2889.9" y2="869.3" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1773.5" y1="1274.0" x2="1643.3" y2="1369.3" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1809.3" y1="1274.0" x2="1772.5" y2="1391.2" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1841.4" y1="1274.0" x2="1915.2" y2="1391.4" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1883.0" y1="1274.0" x2="2031.6" y2="1354.3" stroke="#475569" stroke-width="1.6"/>
+  <line x1="2719.5" y1="1426.0" x2="2871.4" y2="1339.2" stroke="#475569" stroke-width="1.6"/>
+  <line x1="2750.0" y1="1449.1" x2="2899.3" y2="1431.0" stroke="#475569" stroke-width="1.6"/>
+  <line x1="2750.0" y1="1478.0" x2="2912.5" y2="1510.5" stroke="#475569" stroke-width="1.6"/>
+  <line x1="2715.6" y1="1494.0" x2="2894.3" y2="1603.2" stroke="#475569" stroke-width="1.6"/>
+  <line x1="2677.4" y1="1494.0" x2="2763.0" y2="1661.6" stroke="#475569" stroke-width="1.6"/>
+  <line x1="2654.8" y1="1494.0" x2="2628.6" y2="1666.1" stroke="#475569" stroke-width="1.6"/>
+  <line x1="2626.0" y1="1494.0" x2="2468.5" y2="1651.5" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1774.3" y1="1764.0" x2="1632.9" y2="1869.2" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1809.0" y1="1764.0" x2="1767.7" y2="1891.2" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1840.2" y1="1764.0" x2="1915.9" y2="1891.3" stroke="#475569" stroke-width="1.6"/>
+  <line x1="1881.0" y1="1764.0" x2="2042.6" y2="1854.1" stroke="#475569" stroke-width="1.6"/>
+  <line x1="635.8" y1="1338.8" x2="569.7" y2="1327.2" stroke="#475569" stroke-width="1.6"/>
+  <line x1="733.0" y1="1378.1" x2="842.6" y2="1471.6" stroke="#475569" stroke-width="1.6"/>
+  <!-- Relationship lines -->
+  <line x1="1015.0" y1="914.0" x2="728.2" y2="623.5" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="946.5" y="816.3" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="957.5" y="827.3" class="card-label">1</text>
+  <line x1="433.1" y1="424.0" x2="663.0" y2="571.3" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+  <rect x="490.4" y="433.0" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="501.4" y="444.0" class="card-label">N</text>
+  <line x1="1060.0" y1="914.0" x2="1060.0" y2="649.0" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="1069.0" y="836.8" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1080.0" y="847.8" class="card-label">1</text>
+  <rect x="999.2" y="745.0" width="77.6" height="20" rx="4" fill="#FFFFFF" fill-opacity="0.92"/>
+  <text x="1038.0" y="755.0" class="role-label">(mentor)</text>
+  <line x1="1060.0" y1="374.0" x2="1060.0" y2="561.0" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+  <rect x="1029.0" y="409.8" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1040.0" y="420.8" class="card-label">N</text>
+  <line x1="1015.0" y1="986.0" x2="727.1" y2="1318.7" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="916.9" y="1045.1" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="927.9" y="1056.1" class="card-label">M</text>
+  <line x1="420.3" y1="1586.0" x2="666.8" y2="1378.0" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="458.0" y="1507.7" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="469.0" y="1518.7" class="card-label">N</text>
+  <line x1="1105.0" y1="914.0" x2="1384.4" y2="598.8" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="1148.9" y="810.9" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1159.9" y="821.9" class="card-label">1</text>
+  <rect x="1250.3" y="729.5" width="77.6" height="20" rx="4" fill="#FFFFFF" fill-opacity="0.92"/>
+  <text x="1289.1" y="739.5" class="role-label">(mentee)</text>
+  <line x1="1759.4" y1="374.0" x2="1448.5" y2="548.4" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+  <rect x="1660.9" y="389.2" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1671.9" y="400.2" class="card-label">N</text>
+  <line x1="1820.0" y1="374.0" x2="1820.0" y2="522.0" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="1789.0" y="400.0" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1800.0" y="411.0" class="card-label">1</text>
+  <line x1="1820.0" y1="784.0" x2="1820.0" y2="608.0" stroke="#1E293B" stroke-width="2.2" marker-end="url(#arrow-thin)"/>
+  <rect x="1829.0" y="729.0" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1840.0" y="740.0" class="card-label">N</text>
+  <rect x="1751.0" y="668.4" width="94.0" height="20" rx="4" fill="#FFFFFF" fill-opacity="0.92"/>
+  <text x="1798.0" y="678.4" class="role-label">(optional)</text>
+  <line x1="1145.0" y1="930.0" x2="1370.8" y2="810.7" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="1181.1" y="871.5" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1192.1" y="882.5" class="card-label">1</text>
+  <rect x="1231.4" y="829.0" width="77.6" height="20" rx="4" fill="#FFFFFF" fill-opacity="0.92"/>
+  <text x="1270.2" y="839.0" class="role-label">(mentee)</text>
+  <line x1="1685.0" y1="806.0" x2="1480.0" y2="794.1" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+  <rect x="1623.9" y="772.1" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1634.9" y="783.1" class="card-label">N</text>
+  <line x1="1145.0" y1="950.0" x2="1321.4" y2="940.0" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="1177.0" y="916.5" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1188.0" y="927.5" class="card-label">1</text>
+  <rect x="1213.3" y="956.0" width="77.6" height="20" rx="4" fill="#FFFFFF" fill-opacity="0.92"/>
+  <text x="1252.1" y="966.0" class="role-label">(mentor)</text>
+  <line x1="1685.0" y1="836.0" x2="1465.0" y2="915.2" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+  <rect x="1612.2" y="826.0" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1623.2" y="837.0" class="card-label">N</text>
+  <line x1="1955.0" y1="820.0" x2="2142.5" y2="820.0" stroke="#1E293B" stroke-width="2.2" marker-end="url(#arrow-thin)"/>
+  <rect x="1990.9" y="789.0" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="2001.9" y="800.0" class="card-label">1</text>
+  <rect x="2036.9" y="832.0" width="61.2" height="20" rx="4" fill="#FFFFFF" fill-opacity="0.92"/>
+  <text x="2067.5" y="842.0" class="role-label">(0..1)</text>
+  <line x1="2535.0" y1="820.0" x2="2327.5" y2="820.0" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+  <rect x="2472.1" y="789.0" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="2483.1" y="800.0" class="card-label">1</text>
+  <line x1="1145.0" y1="966.0" x2="1370.2" y2="1088.4" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="1199.9" y="968.0" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1210.9" y="979.0" class="card-label">1</text>
+  <rect x="1243.6" y="1010.1" width="94.0" height="20" rx="4" fill="#FFFFFF" fill-opacity="0.92"/>
+  <text x="1290.6" y="1020.1" class="role-label">(reviewer)</text>
+  <line x1="1703.0" y1="1226.0" x2="1456.1" y2="1128.2" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+  <rect x="1637.6" y="1172.0" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1648.6" y="1183.0" class="card-label">N</text>
+  <line x1="1125.0" y1="986.0" x2="1377.1" y2="1215.1" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="1190.5" y="1017.5" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1201.5" y="1028.5" class="card-label">1</text>
+  <rect x="1214.5" y="1129.8" width="94.0" height="20" rx="4" fill="#FFFFFF" fill-opacity="0.92"/>
+  <text x="1261.5" y="1139.8" class="role-label">(reviewee)</text>
+  <line x1="1703.0" y1="1254.0" x2="1505.7" y2="1247.9" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+  <rect x="1643.3" y="1221.5" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1654.3" y="1232.5" class="card-label">N</text>
+  <line x1="2595.0" y1="856.0" x2="2295.7" y2="1030.5" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="2499.1" y="871.3" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="2510.1" y="882.3" class="card-label">1</text>
+  <line x1="1937.0" y1="1230.0" x2="2192.7" y2="1088.9" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+  <rect x="1980.3" y="1166.2" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1991.3" y="1177.2" class="card-label">N</text>
+  <line x1="2660.0" y1="856.0" x2="2660.0" y2="1095.0" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="2629.0" y="904.8" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="2640.0" y="915.8" class="card-label">1</text>
+  <line x1="2660.0" y1="1426.0" x2="2660.0" y2="1185.0" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+  <rect x="2669.0" y="1354.8" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="2680.0" y="1365.8" class="card-label">N</text>
+  <line x1="2570.0" y1="1472.0" x2="2294.9" y2="1576.1" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="2483.2" y="1468.3" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="2494.2" y="1479.3" class="card-label">1</text>
+  <line x1="1922.0" y1="1718.0" x2="2195.2" y2="1614.0" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+  <rect x="1972.2" y="1662.3" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1983.2" y="1673.3" class="card-label">N</text>
+  <line x1="1090.0" y1="986.0" x2="1370.6" y2="1452.8" stroke="#1E293B" stroke-width="2.2"/>
+  <rect x="1166.3" y="1081.4" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1177.3" y="1092.4" class="card-label">1</text>
+  <rect x="1200.7" y="1267.4" width="77.6" height="20" rx="4" fill="#FFFFFF" fill-opacity="0.92"/>
+  <text x="1239.5" y="1277.4" class="role-label">(author)</text>
+  <line x1="1718.0" y1="1718.0" x2="1424.0" y2="1509.1" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+  <rect x="1645.1" y="1638.5" width="22" height="22" rx="4" fill="#FFFFFF" fill-opacity="0.9"/>
+  <text x="1656.1" y="1649.5" class="card-label">N</text>
+  <!-- Attribute ellipses -->
+  <ellipse cx="610" cy="815" rx="56" ry="24" fill="#DCFCE7" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="610" y="815" class="attr-pk">id</text>
+  <ellipse cx="760" cy="745" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="760" y="745" class="attr-text">email</text>
+  <ellipse cx="520" cy="905" rx="91" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="520" y="905" class="attr-text">password_hash</text>
+  <ellipse cx="740" cy="880" rx="76" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="740" y="880" class="attr-text">first_name</text>
+  <ellipse cx="520" cy="995" rx="70" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="520" y="995" class="attr-text">last_name</text>
+  <ellipse cx="740" cy="975" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="740" y="975" class="attr-text">role</text>
+  <ellipse cx="535" cy="1085" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="535" y="1085" class="attr-text">bio</text>
+  <ellipse cx="735" cy="1075" rx="91" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="735" y="1075" class="attr-text">current_title</text>
+  <ellipse cx="580" cy="1155" rx="86" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="580" y="1155" class="attr-text">organization</text>
+  <ellipse cx="735" cy="1185" rx="76" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="735" y="1185" class="attr-text">created_at</text>
+  <ellipse cx="175" cy="240" rx="56" ry="24" fill="#DCFCE7" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="175" y="240" class="attr-pk">id</text>
+  <ellipse cx="355" cy="200" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="355" y="200" class="attr-text">title</text>
+  <ellipse cx="555" cy="225" rx="60" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="555" y="225" class="attr-text">message</text>
+  <ellipse cx="155" cy="390" rx="60" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="155" y="390" class="attr-text">is_read</text>
+  <ellipse cx="205" cy="520" rx="76" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="205" y="520" class="attr-text">created_at</text>
+  <ellipse cx="825" cy="205" rx="56" ry="24" fill="#DCFCE7" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="825" y="205" class="attr-pk">id</text>
+  <ellipse cx="970" cy="170" rx="81" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="970" y="170" class="attr-text">day_of_week</text>
+  <ellipse cx="1150" cy="170" rx="76" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="1150" y="170" class="attr-text">start_time</text>
+  <ellipse cx="1295" cy="205" rx="65" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="1295" y="205" class="attr-text">end_time</text>
+  <ellipse cx="1300" cy="315" rx="70" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="1300" y="315" class="attr-text">is_active</text>
+  <ellipse cx="170" cy="1510" rx="56" ry="24" fill="#DCFCE7" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="170" y="1510" class="attr-pk">id</text>
+  <ellipse cx="160" cy="1640" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="160" y="1640" class="attr-text">name</text>
+  <ellipse cx="250" cy="1775" rx="65" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="250" y="1775" class="attr-text">category</text>
+  <ellipse cx="480" cy="1785" rx="81" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="480" y="1785" class="attr-text">description</text>
+  <ellipse cx="1575" cy="205" rx="56" ry="24" fill="#DCFCE7" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="1575" y="205" class="attr-pk">id</text>
+  <ellipse cx="1735" cy="170" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="1735" y="170" class="attr-text">title</text>
+  <ellipse cx="1920" cy="170" rx="81" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="1920" y="170" class="attr-text">description</text>
+  <ellipse cx="2135" cy="220" rx="138" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2135" y="220" class="attr-text">target_completion_date</text>
+  <ellipse cx="2125" cy="330" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2125" y="330" class="attr-text">status</text>
+  <ellipse cx="2085" cy="435" rx="76" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2085" y="435" class="attr-text">created_at</text>
+  <ellipse cx="1565" cy="680" rx="56" ry="24" fill="#DCFCE7" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="1565" y="680" class="attr-pk">id</text>
+  <ellipse cx="2020" cy="650" rx="60" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2020" y="650" class="attr-text">message</text>
+  <ellipse cx="2135" cy="725" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2135" y="725" class="attr-text">status</text>
+  <ellipse cx="1575" cy="965" rx="76" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="1575" y="965" class="attr-text">created_at</text>
+  <ellipse cx="2070" cy="935" rx="76" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2070" y="935" class="attr-text">decided_at</text>
+  <ellipse cx="2485" cy="650" rx="56" ry="24" fill="#DCFCE7" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="2485" y="650" class="attr-pk">id</text>
+  <ellipse cx="2670" cy="620" rx="76" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2670" y="620" class="attr-text">start_date</text>
+  <ellipse cx="2860" cy="650" rx="65" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2860" y="650" class="attr-text">end_date</text>
+  <ellipse cx="2945" cy="765" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2945" y="765" class="attr-text">status</text>
+  <ellipse cx="2940" cy="880" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2940" y="880" class="attr-text">notes</text>
+  <ellipse cx="1615" cy="1390" rx="56" ry="24" fill="#DCFCE7" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="1615" y="1390" class="attr-pk">id</text>
+  <ellipse cx="1765" cy="1415" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="1765" y="1415" class="attr-text">rating</text>
+  <ellipse cx="1930" cy="1415" rx="81" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="1930" y="1415" class="attr-text">review_text</text>
+  <ellipse cx="2070" cy="1375" rx="76" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2070" y="1375" class="attr-text">created_at</text>
+  <ellipse cx="2905" cy="1320" rx="56" ry="24" fill="#DCFCE7" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="2905" y="1320" class="attr-pk">id</text>
+  <ellipse cx="2990" cy="1420" rx="102" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2990" y="1420" class="attr-text">scheduled_start</text>
+  <ellipse cx="2985" cy="1525" rx="91" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2985" y="1525" class="attr-text">scheduled_end</text>
+  <ellipse cx="2930" cy="1625" rx="86" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2930" y="1625" class="attr-text">meeting_link</text>
+  <ellipse cx="2775" cy="1685" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2775" y="1685" class="attr-text">agenda</text>
+  <ellipse cx="2625" cy="1690" rx="56" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2625" y="1690" class="attr-text">status</text>
+  <ellipse cx="2445" cy="1675" rx="122" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2445" y="1675" class="attr-text">cancellation_reason</text>
+  <ellipse cx="1605" cy="1890" rx="56" ry="24" fill="#DCFCE7" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="1605" y="1890" class="attr-pk">id</text>
+  <ellipse cx="1760" cy="1915" rx="60" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="1760" y="1915" class="attr-text">summary</text>
+  <ellipse cx="1930" cy="1915" rx="86" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="1930" y="1915" class="attr-text">action_items</text>
+  <ellipse cx="2080" cy="1875" rx="76" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="2080" y="1875" class="attr-text">created_at</text>
+  <ellipse cx="500" cy="1315" rx="81" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="500" y="1315" class="attr-text">proficiency</text>
+  <ellipse cx="870" cy="1495" rx="122" ry="24" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.8"/>
+  <text x="870" y="1495" class="attr-text">years_of_experience</text>
+  <!-- Entity rectangles -->
+  <rect x="975.0" y="914.0" width="170" height="72" fill="#FDE8D7" stroke="#1E293B" stroke-width="2.6"/>
+  <text x="1060" y="950" class="entity-text">User</text>
+  <rect x="280.0" y="356.0" width="200" height="68" fill="#FDE8D7" stroke="#1E293B" stroke-width="2.6"/>
+  <text x="380" y="390" class="entity-text">Notification</text>
+  <rect x="940.0" y="306.0" width="240" height="68" fill="#FDE8D7" stroke="#1E293B" stroke-width="2.6"/>
+  <text x="1060" y="340" class="entity-text">MentorAvailability</text>
+  <rect x="300.0" y="1586.0" width="160" height="68" fill="#FDE8D7" stroke="#1E293B" stroke-width="2.6"/>
+  <text x="380" y="1620" class="entity-text">Skill</text>
+  <rect x="1707.5" y="306.0" width="225" height="68" fill="#FDE8D7" stroke="#1E293B" stroke-width="2.6"/>
+  <text x="1820" y="340" class="entity-text">MentorshipGoal</text>
+  <rect x="1685.0" y="784.0" width="270" height="72" fill="#FDE8D7" stroke="#1E293B" stroke-width="2.6"/>
+  <text x="1820" y="820" class="entity-text">MentorshipApplication</text>
+  <rect x="2535.0" y="784.0" width="250" height="72" fill="#FDE8D7" stroke="#1E293B" stroke-width="2.6"/>
+  <text x="2660" y="820" class="entity-text">MentorshipRelation</text>
+  <rect x="1702.5" y="1206.0" width="235" height="68" fill="#FDE8D7" stroke="#1E293B" stroke-width="2.6"/>
+  <text x="1820" y="1240" class="entity-text">ReviewAndRating</text>
+  <rect x="2570.0" y="1426.0" width="180" height="68" fill="#FDE8D7" stroke="#1E293B" stroke-width="2.6"/>
+  <text x="2660" y="1460" class="entity-text">Meeting</text>
+  <rect x="1717.5" y="1696.0" width="205" height="68" fill="#FDE8D7" stroke="#1E293B" stroke-width="2.6"/>
+  <text x="1820" y="1730" class="entity-text">MeetingNote</text>
+  <!-- Relationship diamonds -->
+  <polygon points="700,551.0 780.0,595 700,639.0 620.0,595" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="700" y="595" class="diamond-text">Receives</text>
+  <polygon points="1060,561.0 1145.0,605 1060,649.0 975.0,605" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="1060" y="605" class="diamond-text">Publishes</text>
+  <polygon points="700,1304.0 785.0,1350 700,1396.0 615.0,1350" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="700" y="1350" class="diamond-text">Possesses</text>
+  <polygon points="1410,527.0 1487.5,570 1410,613.0 1332.5,570" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="1410" y="570" class="diamond-text">Defines</text>
+  <polygon points="1820,522.0 1897.5,565 1820,608.0 1742.5,565" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="1820" y="565" class="diamond-text">Targets</text>
+  <polygon points="1410,748.0 1487.5,790 1410,832.0 1332.5,790" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="1410" y="790" class="diamond-text">Submits</text>
+  <polygon points="1410,891.0 1510.0,935 1410,979.0 1310.0,935" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="1410" y="935" class="diamond-text">Receives_App</text>
+  <polygon points="2235,774.0 2327.5,820 2235,866.0 2142.5,820" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="2235" y="820" class="diamond-text">Formalizes</text>
+  <polygon points="1410,1067.0 1490.0,1110 1410,1153.0 1330.0,1110" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="1410" y="1110" class="diamond-text">Writes</text>
+  <polygon points="1410,1201.0 1512.5,1245 1410,1289.0 1307.5,1245" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="1410" y="1245" class="diamond-text">Evaluated_As</text>
+  <polygon points="2245,1011.0 2372.5,1060 2245,1109.0 2117.5,1060" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="2245" y="1060" class="diamond-text">Evaluated_Through</text>
+  <polygon points="2660,1095.0 2745.0,1140 2660,1185.0 2575.0,1140" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="2660" y="1140" class="diamond-text">Conducts</text>
+  <polygon points="2245,1551.0 2332.5,1595 2245,1639.0 2157.5,1595" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="2245" y="1595" class="diamond-text">Documents</text>
+  <polygon points="1390,1442.0 1467.5,1485 1390,1528.0 1312.5,1485" fill="#E9D8FD" stroke="#1E293B" stroke-width="2.2"/>
+  <text x="1390" y="1485" class="diamond-text">Authors</text>
+
+  <!-- Legend -->
+  <g transform="translate(2390, 1765)">
+    <rect x="0" y="0" width="850" height="285" rx="10" fill="#F8FAFC" stroke="#94A3B8" stroke-width="2"/>
+    <text x="24" y="34" class="legend-title">Chen ER Notation Legend (BLG 317E / BBF 302E Course Standard)</text>
+    <line x1="20" y1="48" x2="830" y2="48" stroke="#CBD5E1" stroke-width="1.5"/>
+
+    <!-- Shapes column -->
+    <rect x="28" y="68" width="90" height="36" fill="#FDE8D7" stroke="#1E293B" stroke-width="2.2"/>
+    <text x="73" y="86" class="entity-text" style="font-size:13px;">Entity</text>
+    <text x="134" y="91" class="legend-text">Strong Entity Set</text>
+
+    <polygon points="73,118 118,141 73,164 28,141" fill="#E9D8FD" stroke="#1E293B" stroke-width="2"/>
+    <text x="73" y="141" class="diamond-text" style="font-size:12px;">Rel.</text>
+    <text x="134" y="146" class="legend-text">Relationship Set (M:N, 1:N, 1:1)</text>
+
+    <ellipse cx="73" cy="194" rx="45" ry="18" fill="#FEF9C3" stroke="#1E293B" stroke-width="1.6"/>
+    <text x="73" y="194" class="attr-text" style="font-size:12px;">attr</text>
+    <text x="134" y="199" class="legend-text">Attribute (of Entity or Relationship)</text>
+
+    <ellipse cx="73" cy="244" rx="45" ry="18" fill="#DCFCE7" stroke="#1E293B" stroke-width="2"/>
+    <text x="73" y="244" class="attr-pk" style="font-size:12px;">id</text>
+    <text x="134" y="249" class="legend-text">Primary Key Attribute (underlined)</text>
+
+    <!-- Cardinality & Participation column -->
+    <line x1="430" y1="86" x2="505" y2="86" stroke="#1E293B" stroke-width="2.2"/>
+    <text x="520" y="91" class="legend-text">Thin line: Many (0..N), partial participation</text>
+
+    <line x1="430" y1="136" x2="505" y2="136" stroke="#1E293B" stroke-width="5.5"/>
+    <text x="520" y="141" class="legend-text">Bold line: Many (1..N), total participation (≥ 1)</text>
+
+    <line x1="430" y1="186" x2="502" y2="186" stroke="#1E293B" stroke-width="2.2" marker-end="url(#arrow-thin)"/>
+    <text x="520" y="191" class="legend-text">Thin arrow → diamond: At most 1 (0..1)</text>
+
+    <line x1="430" y1="236" x2="502" y2="236" stroke="#1E293B" stroke-width="5.5" marker-end="url(#arrow-bold)"/>
+    <text x="520" y="241" class="legend-text">Bold arrow → diamond: Exactly 1 (total &amp; unique)</text>
+  </g>
+
+</svg>
